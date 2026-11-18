@@ -1,0 +1,2419 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>말랑말랑 네모로직 탐험대</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Jua & Gaegu for friendly kids typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Jua&display=swap" rel="stylesheet">
+    <!-- Canvas Confetti for celebration -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        body {
+            font-family: 'Jua', sans-serif;
+            background-color: #FFFBEB;
+            background-image: radial-gradient(#FDE68A 2px, transparent 2px), radial-gradient(#FDE68A 2px, #FFFBEB 2px);
+            background-size: 40px 40px;
+            background-position: 0 0, 20px 20px;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+
+        .font-hand {
+            font-family: 'Gaegu', cursive;
+        }
+
+        /* 귀여운 입체 버튼 효과 */
+        .btn-cute {
+            transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 6px 0 rgba(0, 0, 0, 0.15);
+        }
+        .btn-cute:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-cute-lg {
+            transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 8px 0 rgba(0, 0, 0, 0.15);
+        }
+        .btn-cute-lg:active {
+            transform: translateY(6px);
+            box-shadow: 0 2px 0 rgba(0, 0, 0, 0.15);
+        }
+
+        /* 퍼즐 칸 애니메이션 */
+        .cell {
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.25s ease;
+        }
+        .cell-filled {
+            background-color: #38BDF8;
+            border-color: #0284C7;
+            transform: scale(0.95);
+            box-shadow: inset 0 -4px 0 rgba(0,0,0,0.15);
+        }
+        .cell-x {
+            background-color: #F1F5F9;
+        }
+        .cell-hint-glow {
+            animation: pulse-ring 1.2s infinite;
+        }
+
+        @keyframes pulse-ring {
+            0% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.8), inset 0 0 12px #FACC15; }
+            70% { box-shadow: 0 0 0 12px rgba(250, 204, 21, 0), inset 0 0 4px #FACC15; }
+            100% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0), inset 0 0 12px #FACC15; }
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            80% { transform: scale(1.08); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop {
+            animation: popIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        @keyframes floatSlow {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-6px); }
+        }
+        .animate-float {
+            animation: floatSlow 3s ease-in-out infinite;
+        }
+
+        /* 힌트 완료 스타일 */
+        .clue-done {
+            background-color: #DCFCE7 !important;
+            color: #16A34A !important;
+            border-color: #86EFAC !important;
+            opacity: 0.75;
+        }
+        
+        /* 줄 하이라이트 */
+        .line-highlight {
+            background-color: #FEF08A !important;
+            border-color: #FACC15 !important;
+            transform: scale(1.05);
+        }
+
+        /* 픽셀 아트 변신 애니메이션 */
+        @keyframes colorReveal {
+            0% { transform: scale(0.6) rotate(-8deg); opacity: 0.5; }
+            60% { transform: scale(1.12) rotate(3deg); opacity: 1; }
+            100% { transform: scale(1) rotate(0deg); opacity: 1; }
+        }
+        .cell-color-reveal {
+            animation: colorReveal 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+            box-shadow: inset 0 -3px 0 rgba(0,0,0,0.18);
+        }
+
+        /* 3초 정답 엿보기 오버레이 효과 */
+        .cell-peek {
+            background-color: #FEF08A !important;
+            border-color: #F59E0B !important;
+            box-shadow: inset 0 0 10px rgba(245, 158, 11, 0.45);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between text-slate-800 overflow-x-hidden">
+
+    <!-- 상단 네비게이션 바 -->
+    <header class="w-full max-w-4xl mx-auto pt-3 px-3 sm:px-4 flex flex-col gap-2.5 z-10">
+        <div class="flex items-center justify-between">
+            <div onclick="showScreen('home')" class="flex items-center gap-2 bg-white px-3.5 py-2 rounded-3xl border-4 border-amber-300 shadow-sm cursor-pointer hover:bg-amber-50 transition">
+                <span class="text-2xl sm:text-3xl">🐾</span>
+                <span class="text-lg sm:text-2xl text-amber-600 tracking-wide">말랑말랑 네모로직 탐험대</span>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <!-- 소리 켜기/끄기 버튼 -->
+                <button id="soundToggleBtn" onclick="toggleSound()" class="btn-cute bg-white p-2 sm:px-3.5 sm:py-2 rounded-2xl border-4 border-sky-300 text-sky-600 flex items-center gap-1 text-base sm:text-lg">
+                    <span id="soundIcon" class="text-xl">🔊</span>
+                    <span id="soundText" class="hidden sm:inline text-sm">소리 켜짐</span>
+                </button>
+
+                <!-- 내 스티커북 버튼 -->
+                <button onclick="showScreen('stickerbook')" class="btn-cute bg-pink-400 hover:bg-pink-500 text-white px-3 py-2 sm:px-4 sm:py-2 rounded-2xl border-4 border-pink-600 flex items-center gap-1.5 text-base sm:text-lg">
+                    <span class="text-xl">📒</span>
+                    <span>스티커 도감</span>
+                    <span id="headerStickerCount" class="bg-white text-pink-600 px-2 py-0.5 rounded-full text-xs sm:text-sm font-bold">0/32</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- 상단 1~4단계 빠른 전환 탭 바 -->
+        <nav class="grid grid-cols-4 gap-1.5 sm:gap-2.5 bg-white/90 p-1.5 sm:p-2 rounded-3xl border-4 border-amber-200 shadow-xs">
+            <button id="tab-tut" onclick="startTutorial(currentTutIndex)" class="stage-tab btn-cute py-1.5 sm:py-2 px-1 sm:px-3 rounded-2xl border-2 text-xs sm:text-base flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 bg-emerald-50 border-emerald-300 text-emerald-800">
+                <span class="text-base sm:text-xl">🌱</span>
+                <span>1단계: 한줄배우기</span>
+            </button>
+            <button id="tab-3x3" onclick="openLevelSelect('3x3')" class="stage-tab btn-cute py-1.5 sm:py-2 px-1 sm:px-3 rounded-2xl border-2 text-xs sm:text-base flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 bg-amber-50 border-amber-300 text-amber-800">
+                <span class="text-base sm:text-xl">🐣</span>
+                <span>2단계: 아기 3×3</span>
+            </button>
+            <button id="tab-4x4" onclick="openLevelSelect('4x4')" class="stage-tab btn-cute py-1.5 sm:py-2 px-1 sm:px-3 rounded-2xl border-2 text-xs sm:text-base flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 bg-sky-50 border-sky-300 text-sky-800">
+                <span class="text-base sm:text-xl">🐥</span>
+                <span>3단계: 쑥쑥 4×4</span>
+            </button>
+            <button id="tab-5x5" onclick="openLevelSelect('5x5')" class="stage-tab btn-cute py-1.5 sm:py-2 px-1 sm:px-3 rounded-2xl border-2 text-xs sm:text-base flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 bg-violet-50 border-violet-300 text-violet-800">
+                <span class="text-base sm:text-xl">🦅</span>
+                <span>4단계: 박사 5×5</span>
+            </button>
+        </nav>
+    </header>
+
+    <!-- 메인 컨텐츠 영역 -->
+    <main class="flex-1 w-full max-w-4xl mx-auto px-3 sm:px-4 py-3 sm:py-4 flex flex-col justify-center items-center">
+
+        <!-- ================= 1. 홈 화면 ================= -->
+        <section id="screen-home" class="w-full flex flex-col items-center text-center animate-pop">
+            <!-- 마스코트 환영 인사 -->
+            <div class="bg-white border-4 border-amber-300 rounded-3xl p-4 sm:p-6 shadow-lg max-w-2xl w-full mb-5 relative">
+                <div class="text-5xl sm:text-6xl mb-2 animate-float">🦊🎨✨</div>
+                <h1 class="text-2xl sm:text-4xl text-amber-500 mb-1.5">안녕! 꼬마 네모로직 탐험가 친구!</h1>
+                <p class="text-lg sm:text-2xl text-slate-600 font-hand font-bold leading-relaxed">
+                    "숫자 힌트를 보고 네모 칸을 콕콕 색칠하면,<br>
+                    총 <span class="text-pink-500 underline">40개의 미션</span> 속에 숨어있는 알록달록 그림이 짠! 하고 나타난단다!"
+                </p>
+            </div>
+
+            <!-- 4단계 모드 선택 카드 그리드 -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 w-full">
+                <!-- 1단계: 배워보기 (8미션) -->
+                <button onclick="startTutorial(0)" class="btn-cute-lg bg-emerald-400 hover:bg-emerald-500 text-white p-4 sm:p-5 rounded-3xl border-4 border-emerald-600 flex flex-col items-center justify-between gap-2 text-center">
+                    <div class="bg-emerald-200/40 w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center text-3xl sm:text-4xl">🌱</div>
+                    <div>
+                        <span class="bg-emerald-700/40 text-xs px-2.5 py-1 rounded-full">1단계 · 8개 미션</span>
+                        <h2 class="text-xl sm:text-2xl mt-1.5">한 줄 배워보기</h2>
+                        <p class="text-emerald-50 text-xs sm:text-sm mt-1">부엉이 선생님과 규칙 익히기</p>
+                    </div>
+                    <span id="homeCountTut" class="bg-white/90 text-emerald-700 text-xs px-3 py-1 rounded-full font-bold">미션 8개</span>
+                </button>
+
+                <!-- 2단계: 3x3 퍼즐 (10미션) -->
+                <button onclick="openLevelSelect('3x3')" class="btn-cute-lg bg-amber-400 hover:bg-amber-500 text-white p-4 sm:p-5 rounded-3xl border-4 border-amber-600 flex flex-col items-center justify-between gap-2 text-center">
+                    <div class="bg-amber-200/40 w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center text-3xl sm:text-4xl">🐣</div>
+                    <div>
+                        <span class="bg-amber-700/40 text-xs px-2.5 py-1 rounded-full">2단계 · 3칸 × 3칸</span>
+                        <h2 class="text-xl sm:text-2xl mt-1.5">아기 네모 3×3</h2>
+                        <p class="text-amber-50 text-xs sm:text-sm mt-1">아주 쉬운 첫걸음 퍼즐 10개!</p>
+                    </div>
+                    <span id="homeCount3x3" class="bg-white/90 text-amber-700 text-xs px-3 py-1 rounded-full font-bold">0 / 10 완료</span>
+                </button>
+
+                <!-- 3단계: 4x4 퍼즐 (10미션) -->
+                <button onclick="openLevelSelect('4x4')" class="btn-cute-lg bg-sky-400 hover:bg-sky-500 text-white p-4 sm:p-5 rounded-3xl border-4 border-sky-600 flex flex-col items-center justify-between gap-2 text-center">
+                    <div class="bg-sky-200/40 w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center text-3xl sm:text-4xl">🐥</div>
+                    <div>
+                        <span class="bg-sky-700/40 text-xs px-2.5 py-1 rounded-full">3단계 · 4칸 × 4칸</span>
+                        <h2 class="text-xl sm:text-2xl mt-1.5">쑥쑥 네모 4×4</h2>
+                        <p class="text-sky-50 text-xs sm:text-sm mt-1">귀여운 동물과 물건 10개!</p>
+                    </div>
+                    <span id="homeCount4x4" class="bg-white/90 text-sky-700 text-xs px-3 py-1 rounded-full font-bold">0 / 10 완료</span>
+                </button>
+
+                <!-- 4단계: 5x5 퍼즐 (12미션) -->
+                <button onclick="openLevelSelect('5x5')" class="btn-cute-lg bg-violet-400 hover:bg-violet-500 text-white p-4 sm:p-5 rounded-3xl border-4 border-violet-600 flex flex-col items-center justify-between gap-2 text-center">
+                    <div class="bg-violet-200/40 w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center text-3xl sm:text-4xl">🦅</div>
+                    <div>
+                        <span class="bg-violet-700/40 text-xs px-2.5 py-1 rounded-full">4단계 · 5칸 × 5칸</span>
+                        <h2 class="text-xl sm:text-2xl mt-1.5">척척박사 5×5</h2>
+                        <p class="text-violet-50 text-xs sm:text-sm mt-1">멋진 그림 완성하기 12개!</p>
+                    </div>
+                    <span id="homeCount5x5" class="bg-white/90 text-violet-700 text-xs px-3 py-1 rounded-full font-bold">0 / 12 완료</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- ================= 2. 1단계: 한 줄 튜토리얼 화면 (총 8개 미션) ================= -->
+        <section id="screen-tutorial" class="w-full hidden flex-col items-center animate-pop">
+            <div class="w-full max-w-2xl bg-white border-4 border-emerald-400 rounded-3xl p-4 sm:p-6 shadow-lg">
+                <!-- 상단 진행 표시 및 미션 번호 선택 버튼들 -->
+                <div class="flex items-center justify-between mb-3">
+                    <button onclick="showScreen('home')" class="btn-cute bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1.5 rounded-xl border-2 border-slate-300 text-sm sm:text-base">
+                        🏠 홈으로
+                    </button>
+                    <span class="text-emerald-700 text-base sm:text-xl font-bold">🌱 1단계: 한 줄 배워보기</span>
+                    <span id="tutStepLabel" class="text-emerald-700 bg-emerald-100 px-3 py-1 rounded-full text-sm font-bold">미션 1 / 8</span>
+                </div>
+
+                <!-- 1~8번 미션 바로가기 버튼 그리드 -->
+                <div id="tutMissionBtns" class="grid grid-cols-4 sm:grid-cols-8 gap-1.5 sm:gap-2 mb-4 bg-emerald-50/70 p-2 rounded-2xl border-2 border-emerald-200">
+                    <!-- JS로 1~8번 버튼 생성 -->
+                </div>
+
+                <!-- 선생님 캐릭터 대화창 -->
+                <div class="bg-emerald-50 border-3 border-emerald-200 rounded-2xl p-3.5 sm:p-4 flex items-center gap-3 sm:gap-4 mb-5">
+                    <div class="text-4xl sm:text-5xl shrink-0">🦉</div>
+                    <div class="text-left">
+                        <div id="tutTitle" class="text-lg sm:text-xl text-emerald-700 mb-0.5">미션 1: 숫자 '5'의 비밀!</div>
+                        <p id="tutDesc" class="text-lg sm:text-2xl text-slate-700 font-hand font-bold leading-snug">
+                            왼쪽에 적힌 숫자는 색칠할 네모 칸의 개수예요!
+                        </p>
+                    </div>
+                </div>
+
+                <!-- 1줄 실습 보드 영역 -->
+                <div class="flex flex-col items-center justify-center my-2 py-5 bg-amber-50/70 rounded-2xl border-2 border-dashed border-amber-300 px-2">
+                    <div class="flex items-center gap-2 sm:gap-3">
+                        <!-- 숫자 힌트 박스 -->
+                        <div id="tutClueBox" class="min-w-[74px] sm:min-w-[96px] h-14 sm:h-16 px-3 bg-amber-200 border-4 border-amber-400 rounded-2xl flex items-center justify-center gap-1.5 text-2xl sm:text-3xl text-amber-900 shadow-sm transition-all">
+                            5
+                        </div>
+                        <!-- 5칸 그리드 -->
+                        <div id="tutGrid" oncontextmenu="return false;" class="flex gap-1.5 sm:gap-2 bg-slate-300 p-2 rounded-2xl border-4 border-slate-400">
+                            <!-- JS로 5칸 생성 -->
+                        </div>
+                    </div>
+
+                    <!-- 실시간 피드백 메시지 -->
+                    <div id="tutFeedback" class="mt-4 text-base sm:text-xl text-amber-700 min-h-[2rem] text-center px-2">
+                        네모 칸을 콕콕 눌러서 색칠해 볼까요?
+                    </div>
+                </div>
+
+                <!-- 튜토리얼 내 도구 토글 (연습용) -->
+                <div class="flex justify-center gap-3 mt-4 mb-2">
+                    <button id="tutToolFill" onclick="setTutTool('fill')" class="btn-cute flex-1 max-w-[170px] py-2.5 px-4 rounded-2xl border-4 text-lg flex items-center justify-center gap-2 bg-sky-400 text-white border-sky-600">
+                        <span>✏️</span> <span>색칠하기</span>
+                    </button>
+                    <button id="tutToolX" onclick="setTutTool('x')" class="btn-cute flex-1 max-w-[170px] py-2.5 px-4 rounded-2xl border-4 text-lg flex items-center justify-center gap-2 bg-white text-slate-600 border-slate-300">
+                        <span>❌</span> <span>여긴 아니야</span>
+                    </button>
+                </div>
+
+                <!-- 마우스 우클릭 안내 팁 배지 (1단계) -->
+                <div class="flex justify-center mb-3">
+                    <div class="bg-amber-50 border-2 border-amber-200 text-amber-800 px-3.5 py-1 rounded-full text-xs sm:text-sm flex items-center gap-1.5 shadow-2xs">
+                        <span>💡</span>
+                        <span><b>마우스 팁:</b> 왼쪽 클릭은 <b>색칠✏️</b>, 오른쪽 클릭(우클릭)은 <b>X 표시❌</b>가 바로 돼요!</span>
+                    </div>
+                </div>
+
+                <!-- 이전 / 다시 / 정답보기 / 다음 단계 버튼 -->
+                <div class="flex flex-wrap justify-between items-center gap-2 mt-5 pt-4 border-t-2 border-slate-100">
+                    <button id="tutPrevBtn" onclick="prevTutorial()" class="btn-cute bg-slate-200 text-slate-600 px-3.5 py-2 rounded-2xl border-4 border-slate-300 text-sm sm:text-base">
+                        ⬅️ 이전 미션
+                    </button>
+                    <div class="flex items-center gap-2">
+                        <button onclick="resetTutorialRow()" class="btn-cute bg-amber-100 text-amber-700 px-3.5 py-2 rounded-2xl border-4 border-amber-300 text-sm sm:text-base">
+                            🔄 다시 칠하기
+                        </button>
+                        <button onclick="showTutorialAnswer()" class="btn-cute bg-violet-100 hover:bg-violet-200 text-violet-700 px-3.5 py-2 rounded-2xl border-4 border-violet-300 text-sm sm:text-base">
+                            💡 정답 보기
+                        </button>
+                    </div>
+                    <button id="tutNextBtn" onclick="nextTutorial()" class="btn-cute bg-emerald-400 text-white px-5 py-2 rounded-2xl border-4 border-emerald-600 text-base sm:text-lg hidden">
+                        다음 미션! 🎉
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= 3. 레벨 선택 화면 (3x3 / 4x4 / 5x5) ================= -->
+        <section id="screen-levels" class="w-full hidden flex-col items-center animate-pop">
+            <div class="w-full max-w-3xl bg-white border-4 border-sky-300 rounded-3xl p-4 sm:p-6 shadow-lg">
+                <div class="flex items-center justify-between mb-3">
+                    <button onclick="showScreen('home')" class="btn-cute bg-slate-100 hover:bg-slate-200 text-slate-600 px-3.5 py-1.5 rounded-xl border-2 border-slate-300 text-base">
+                        🏠 홈으로
+                    </button>
+                    <h2 id="levelSelectTitle" class="text-xl sm:text-3xl text-sky-600">🐣 2단계: 아기 네모 3×3</h2>
+                    <span id="levelSelectProgress" class="bg-sky-100 text-sky-700 px-3 py-1 rounded-full text-sm font-bold">0 / 10</span>
+                </div>
+
+                <p id="levelSelectSubtitle" class="text-center text-slate-600 text-base sm:text-xl font-hand font-bold mb-4">
+                    원하는 번호의 미션 상자를 눌러 숨은 그림을 찾아봐!
+                </p>
+
+                <!-- 퍼즐 목록 그리드 (10~12개) -->
+                <div id="levelListGrid" class="grid grid-cols-2 sm:grid-cols-5 gap-3 sm:gap-3.5">
+                    <!-- JS로 카드 생성 -->
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= 4. 본 게임 플레이 화면 ================= -->
+        <section id="screen-game" class="w-full hidden flex-col items-center animate-pop">
+            <div class="w-full max-w-2xl bg-white border-4 border-amber-300 rounded-3xl p-3.5 sm:p-5 shadow-lg flex flex-col items-center">
+                
+                <!-- 상단 헤더: 목록으로, 스테이지 이름, 힌트 요정 -->
+                <div class="w-full flex items-center justify-between mb-2.5">
+                    <button onclick="backToLevels()" class="btn-cute bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1.5 rounded-xl border-2 border-slate-300 text-sm sm:text-base">
+                        📋 미션 목록
+                    </button>
+                    <div id="gameStageBadge" class="bg-amber-100 border-2 border-amber-300 text-amber-800 px-3.5 py-1 rounded-full text-base sm:text-lg font-bold">
+                        3×3 미션 #1
+                    </div>
+                    <button onclick="useHintFairy()" class="btn-cute bg-yellow-300 hover:bg-yellow-400 text-amber-900 px-3 py-1.5 rounded-xl border-3 border-amber-500 text-sm sm:text-base flex items-center gap-1">
+                        <span class="text-lg sm:text-xl">🧚‍♀️</span>
+                        <span>힌트 요정</span>
+                    </button>
+                </div>
+
+                <!-- 현재 단계의 미션 빠른 이동 번호 바 (1~10 / 1~12) -->
+                <div id="inGameMissionBar" class="w-full flex flex-wrap justify-center gap-1.5 bg-amber-50/80 p-2 rounded-2xl border-2 border-amber-200 mb-3">
+                    <!-- JS로 미션 번호 칩 생성 -->
+                </div>
+
+                <!-- 도우미 캐릭터 한 줄 팁 -->
+                <div id="gameHelperBar" class="w-full bg-sky-50 border-2 border-sky-200 rounded-2xl px-3.5 py-2 mb-3 flex items-center gap-2.5">
+                    <span id="helperEmoji" class="text-2xl sm:text-3xl">🦊</span>
+                    <p id="helperMessage" class="text-base sm:text-lg text-slate-700 font-hand font-bold leading-tight">
+                        "가장 큰 숫자가 있는 줄부터 찾아보면 훨씬 쉬워!"
+                    </p>
+                </div>
+
+                <!-- 네모로직 퍼즐 보드 컨테이너 -->
+                <div class="my-1 flex justify-center items-center w-full overflow-x-auto py-1">
+                    <div id="nonogramBoard" oncontextmenu="return false;" class="inline-grid gap-1.5 bg-slate-200 p-2.5 sm:p-3.5 rounded-3xl border-4 border-slate-300 shadow-inner">
+                        <!-- JS로 상단 힌트 + 좌측 힌트 + 셀 렌더링 -->
+                    </div>
+                </div>
+
+                <!-- 하단 큰 컨트롤러: 색칠하기 vs X 표시하기 -->
+                <div class="w-full max-w-md grid grid-cols-2 gap-3 sm:gap-4 mt-3.5">
+                    <button id="modeFillBtn" onclick="setGameTool('fill')" class="btn-cute-lg py-2.5 sm:py-3 px-4 rounded-2xl border-4 flex items-center justify-center gap-2 text-lg sm:text-2xl bg-sky-400 text-white border-sky-600">
+                        <span class="text-2xl sm:text-3xl">✏️</span>
+                        <div class="text-left leading-tight">
+                            <div>색칠하기</div>
+                            <div class="text-xs opacity-90 font-normal">왼쪽 클릭 / 드래그</div>
+                        </div>
+                    </button>
+
+                    <button id="modeXBtn" onclick="setGameTool('x')" class="btn-cute-lg py-2.5 sm:py-3 px-4 rounded-2xl border-4 flex items-center justify-center gap-2 text-lg sm:text-2xl bg-white text-slate-600 border-slate-300">
+                        <span class="text-2xl sm:text-3xl">❌</span>
+                        <div class="text-left leading-tight">
+                            <div>여긴 아니야</div>
+                            <div class="text-xs opacity-75 font-normal">우클릭 / 버튼 선택</div>
+                        </div>
+                    </button>
+                </div>
+
+                <!-- 마우스 우클릭 안내 팁 배지 (2~4단계 본 게임) -->
+                <div class="mt-2.5 bg-amber-50 border-2 border-amber-200 text-amber-800 px-3.5 py-1 rounded-full text-xs sm:text-sm flex items-center justify-center gap-1.5 text-center shadow-2xs">
+                    <span>💡</span>
+                    <span><b>마우스 팁:</b> 왼쪽 클릭은 <b>색칠✏️</b>, 오른쪽 클릭(우클릭·드래그)은 <b>X 표시❌</b>가 바로 돼요!</span>
+                </div>
+
+                <!-- 보조 도구 버튼들 (실수 고치기 / 정답 도우미 / 처음부터) -->
+                <div class="flex flex-wrap items-center justify-center gap-2.5 mt-3.5 w-full">
+                    <button onclick="checkMistakesFriendly()" class="btn-cute bg-emerald-100 hover:bg-emerald-200 text-emerald-800 px-3.5 py-2 rounded-xl border-2 border-emerald-300 text-sm sm:text-base flex items-center gap-1.5">
+                        <span>🔍</span> <span>잘하고 있나 볼까?</span>
+                    </button>
+                    <button onclick="openAnswerHelperModal()" class="btn-cute bg-violet-100 hover:bg-violet-200 text-violet-800 px-3.5 py-2 rounded-xl border-2 border-violet-300 text-sm sm:text-base flex items-center gap-1.5">
+                        <span>👀</span> <span>정답 도우미</span>
+                    </button>
+                    <button onclick="resetCurrentBoard()" class="btn-cute bg-rose-100 hover:bg-rose-200 text-rose-700 px-3.5 py-2 rounded-xl border-2 border-rose-300 text-sm sm:text-base flex items-center gap-1.5">
+                        <span>🧹</span> <span>싹 지우기</span>
+                    </button>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- ================= 5. 내 스티커 도감 화면 (총 32종) ================= -->
+        <section id="screen-stickerbook" class="w-full hidden flex-col items-center animate-pop">
+            <div class="w-full max-w-3xl bg-white border-4 border-pink-300 rounded-3xl p-4 sm:p-6 shadow-lg">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                    <button onclick="showScreen('home')" class="btn-cute bg-slate-100 hover:bg-slate-200 text-slate-600 px-3.5 py-1.5 rounded-xl border-2 border-slate-300 text-base">
+                        🏠 홈으로
+                    </button>
+                    <h2 class="text-xl sm:text-3xl text-pink-500">📒 내가 모은 픽셀 스티커 도감 (32종)</h2>
+                    <button onclick="openResetConfirmModal()" class="text-xs text-slate-400 hover:text-rose-500 underline px-2 py-1">
+                        기록 초기화
+                    </button>
+                </div>
+
+                <p class="text-center text-slate-600 text-base sm:text-xl font-hand font-bold mb-4">
+                    2단계(10개) · 3단계(10개) · 4단계(12개) 퍼즐을 풀면 컬러 픽셀 아트 스티커가 모여요!
+                </p>
+
+                <!-- 도감 필터 탭 -->
+                <div class="flex justify-center gap-2 mb-4">
+                    <button onclick="renderStickerBook('all')" id="stickerFilter-all" class="btn-cute px-3 py-1 rounded-xl border-2 text-sm bg-pink-400 text-white border-pink-600">전체 (32)</button>
+                    <button onclick="renderStickerBook('3x3')" id="stickerFilter-3x3" class="btn-cute px-3 py-1 rounded-xl border-2 text-sm bg-white text-slate-600 border-slate-300">🐣 3×3 (10)</button>
+                    <button onclick="renderStickerBook('4x4')" id="stickerFilter-4x4" class="btn-cute px-3 py-1 rounded-xl border-2 text-sm bg-white text-slate-600 border-slate-300">🐥 4×4 (10)</button>
+                    <button onclick="renderStickerBook('5x5')" id="stickerFilter-5x5" class="btn-cute px-3 py-1 rounded-xl border-2 text-sm bg-white text-slate-600 border-slate-300">🦅 5×5 (12)</button>
+                </div>
+
+                <div id="stickerGrid" class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
+                    <!-- JS로 스티커 슬롯 렌더링 -->
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ================= 완성 축하 모달 팝업 ================= -->
+    <div id="winModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
+        <div class="bg-white border-4 border-amber-400 rounded-3xl p-6 sm:p-7 max-w-md w-full text-center shadow-2xl animate-pop flex flex-col items-center">
+            <div class="bg-amber-100 text-amber-700 px-4 py-1 rounded-full text-base mb-2 border-2 border-amber-300">
+                🎉 우와! 숨은 그림 완성! 🎉
+            </div>
+            <h2 id="winTitle" class="text-3xl sm:text-4xl text-pink-500 my-1">귀여운 강아지 발견!</h2>
+            <p id="winStory" class="text-lg sm:text-xl text-slate-600 font-hand font-bold mb-4">
+                "멍멍! 나를 찾아줘서 고마워!"
+            </p>
+
+            <!-- 컬러 픽셀 아트 쇼케이스 -->
+            <div class="bg-amber-50 p-4 rounded-3xl border-4 border-amber-200 mb-5 flex flex-col items-center shadow-inner">
+                <div id="winEmoji" class="text-5xl mb-2 animate-bounce">🐶</div>
+                <div id="winPixelArt" class="inline-grid gap-1.5 p-2.5 bg-white rounded-2xl border-2 border-amber-200">
+                    <!-- 완성된 컬러 픽셀 그리드 표시 -->
+                </div>
+            </div>
+
+            <div class="flex gap-3 w-full">
+                <button onclick="closeWinModalToList()" class="btn-cute flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 py-3 rounded-2xl border-4 border-slate-300 text-lg sm:text-xl">
+                    미션 목록
+                </button>
+                <button id="nextPuzzleBtn" onclick="playNextPuzzle()" class="btn-cute flex-1 bg-emerald-400 hover:bg-emerald-500 text-white py-3 rounded-2xl border-4 border-emerald-600 text-lg sm:text-xl">
+                    다음 문제 풀기 ➡️
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= 기록 초기화 확인 모달 (커스텀) ================= -->
+    <div id="resetModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
+        <div class="bg-white border-4 border-rose-400 rounded-3xl p-6 max-w-sm w-full text-center shadow-2xl animate-pop">
+            <div class="text-5xl mb-2">🧹</div>
+            <h3 class="text-2xl text-rose-600 mb-2">정말 기록을 지울까요?</h3>
+            <p class="text-slate-600 font-hand font-bold text-lg mb-5">
+                지금까지 모은 스티커와 미션 별표(⭐)가 모두 처음 상태로 돌아가요!
+            </p>
+            <div class="flex gap-3">
+                <button onclick="closeResetConfirmModal()" class="btn-cute flex-1 bg-slate-200 text-slate-700 py-2.5 rounded-2xl border-4 border-slate-300 text-lg">
+                    아니요, 둘래요
+                </button>
+                <button onclick="confirmResetProgress()" class="btn-cute flex-1 bg-rose-500 text-white py-2.5 rounded-2xl border-4 border-rose-700 text-lg">
+                    네, 지울게요
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= 정답 도우미 모달 (3초 엿보기 & 바로 완성) ================= -->
+    <div id="answerModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
+        <div class="bg-white border-4 border-violet-400 rounded-3xl p-6 max-w-md w-full text-center shadow-2xl animate-pop">
+            <div class="text-5xl mb-2">🧚‍♀️💡</div>
+            <h3 class="text-2xl sm:text-3xl text-violet-600 mb-1">정답 도우미 요정</h3>
+            <p class="text-slate-600 font-hand font-bold text-lg sm:text-xl mb-5 leading-snug">
+                "문제가 조금 어렵나요? 어떻게 도와줄까요?"
+            </p>
+            <div class="flex flex-col gap-3">
+                <button onclick="peekAnswer3Seconds()" class="btn-cute w-full bg-amber-300 hover:bg-amber-400 text-amber-950 py-3 px-4 rounded-2xl border-4 border-amber-500 text-lg sm:text-xl flex items-center justify-center gap-2">
+                    <span>👀</span>
+                    <span>3초 동안만 정답 살짝 엿보기!</span>
+                </button>
+                <button onclick="revealFullAnswer()" class="btn-cute w-full bg-violet-500 hover:bg-violet-600 text-white py-3 px-4 rounded-2xl border-4 border-violet-700 text-lg sm:text-xl flex items-center justify-center gap-2">
+                    <span>✨</span>
+                    <span>정답 바로 채워서 그림 완성하기!</span>
+                </button>
+                <button onclick="closeAnswerHelperModal()" class="btn-cute w-full bg-slate-100 hover:bg-slate-200 text-slate-600 py-2.5 px-4 rounded-2xl border-4 border-slate-300 text-base sm:text-lg mt-1">
+                    스스로 조금 더 풀어볼래요!
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 푸터 -->
+    <footer class="text-center py-3 text-slate-400 text-sm">
+        1학년을 위한 즐거운 생각 놀이터 · 말랑말랑 네모로직
+    </footer>
+
+    <script>
+        /* =========================================================================
+           1. 사운드 효과 (Web Audio API 신디사이저 - 외부 파일 불필요)
+           ========================================================================= */
+        let soundEnabled = true;
+        let audioCtx = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (AudioContext) audioCtx = new AudioContext();
+            }
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function playSound(type) {
+            if (!soundEnabled) return;
+            try {
+                initAudio();
+                if (!audioCtx) return;
+
+                const now = audioCtx.currentTime;
+
+                if (type === 'fill') {
+                    // 맑고 귀여운 물방울/실로폰 소리
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(523.25, now); // C5
+                    osc.frequency.exponentialRampToValueAtTime(659.25, now + 0.09); // E5
+                    gain.gain.setValueAtTime(0.25, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.12);
+                } else if (type === 'erase') {
+                    // 가벼운 톡 소리
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(392.00, now);
+                    osc.frequency.exponentialRampToValueAtTime(261.63, now + 0.08);
+                    gain.gain.setValueAtTime(0.18, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.09);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.09);
+                } else if (type === 'x') {
+                    // 똑똑 나무 블록 소리
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(300, now);
+                    osc.frequency.exponentialRampToValueAtTime(180, now + 0.07);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.08);
+                } else if (type === 'lineDone') {
+                    // 한 줄 완성 시 반짝 차임벨
+                    const notes = [587.33, 880]; // D5, A5
+                    notes.forEach((freq, idx) => {
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(freq, now + idx * 0.07);
+                        gain.gain.setValueAtTime(0.15, now + idx * 0.07);
+                        gain.gain.exponentialRampToValueAtTime(0.008, now + idx * 0.07 + 0.2);
+                        osc.connect(gain);
+                        gain.connect(audioCtx.destination);
+                        osc.start(now + idx * 0.07);
+                        osc.stop(now + idx * 0.07 + 0.2);
+                    });
+                } else if (type === 'hint') {
+                    // 요정 마법봉 소리
+                    const notes = [659.25, 783.99, 1046.50, 1318.51];
+                    notes.forEach((freq, idx) => {
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(freq, now + idx * 0.05);
+                        gain.gain.setValueAtTime(0.15, now + idx * 0.05);
+                        gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.05 + 0.18);
+                        osc.connect(gain);
+                        gain.connect(audioCtx.destination);
+                        osc.start(now + idx * 0.05);
+                        osc.stop(now + idx * 0.05 + 0.18);
+                    });
+                } else if (type === 'win') {
+                    // 팡파레 멜로디
+                    const melody = [523.25, 659.25, 783.99, 1046.50]; // C5 E5 G5 C6
+                    melody.forEach((freq, idx) => {
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+                        osc.type = 'triangle';
+                        const startTime = now + idx * 0.11;
+                        const duration = idx === melody.length - 1 ? 0.45 : 0.12;
+                        osc.frequency.setValueAtTime(freq, startTime);
+                        gain.gain.setValueAtTime(0.28, startTime);
+                        gain.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+                        osc.connect(gain);
+                        gain.connect(audioCtx.destination);
+                        osc.start(startTime);
+                        osc.stop(startTime + duration);
+                    });
+                } else if (type === 'oops') {
+                    // 부드러운 띠용 소리
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(320, now);
+                    osc.frequency.linearRampToValueAtTime(220, now + 0.2);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.22);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.22);
+                }
+            } catch (e) {
+                // 오디오 컨텍스트 제한 시 무시
+            }
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            document.getElementById('soundIcon').textContent = soundEnabled ? '🔊' : '🔇';
+            document.getElementById('soundText').textContent = soundEnabled ? '소리 켜짐' : '소리 꺼짐';
+            if (soundEnabled) playSound('fill');
+        }
+
+        /* =========================================================================
+           2. 1단계 튜토리얼(8개 미션) & 2~4단계 퍼즐 데이터(총 32개 퍼즐)
+           ========================================================================= */
+        const TUTORIAL_STEPS = [
+            {
+                id: 'tut_1',
+                label: '5',
+                title: "미션 1: 숫자 '5'의 비밀!",
+                desc: "왼쪽의 숫자 '5'는 5칸을 빈칸 없이 모두 색칠하라는 뜻이에요! 5칸을 쭈욱 눌러 모두 색칠해 볼까요?",
+                clue: [5],
+                target: [1, 1, 1, 1, 1],
+                hintMsg: "빈칸이 하나도 없도록 5칸을 전부 파랗게 색칠해 보세요! (●●●●●)"
+            },
+            {
+                id: 'tut_2',
+                label: '0',
+                title: "미션 2: 숫자 '0'은 아무것도 없어요!",
+                desc: "숫자 '0'은 색칠할 칸이 하나도 없다는 뜻이에요! 아래 '❌ 여긴 아니야' 버튼을 누르고 5칸에 모두 ❌ 표시를 해 보세요!",
+                clue: [0],
+                target: [0, 0, 0, 0, 0],
+                requireAllX: true,
+                hintMsg: "아래의 '❌ 여긴 아니야' 버튼을 고른 뒤, 5칸을 모두 눌러 ❌로 채워보세요!"
+            },
+            {
+                id: 'tut_3',
+                label: '4',
+                title: "미션 3: 숫자 '4' 이어서 색칠하기!",
+                desc: "숫자 '4'는 네 칸을 끊어지지 않게 나란히 이어서 색칠하라는 뜻이에요! 왼쪽이나 오른쪽부터 4칸을 이어 칠해 보세요!",
+                clue: [4],
+                anyContiguous: 4,
+                hintMsg: "네 칸이 기차처럼 나란히 붙어 있어야 해요! (●●●●○ 또는 ○●●●●)"
+            },
+            {
+                id: 'tut_4',
+                label: '3',
+                title: "미션 4: 숫자 '3' 세 칸 모으기!",
+                desc: "숫자 '3'은 세 칸을 나란히 붙여서 색칠하는 거예요! 세 칸을 떨어지지 않게 나란히 색칠해 볼까요?",
+                clue: [3],
+                anyContiguous: 3,
+                hintMsg: "세 칸이 끊어지지 않게 나란히 붙어 있도록 칠해 보세요! (예: ○●●●○)"
+            },
+            {
+                id: 'tut_5',
+                label: '1 1',
+                title: "미션 5: 숫자 '1  1' 띄어서 칠하기!",
+                desc: "숫자가 두 개 적혀 있으면, 색칠한 칸 사이에 빈칸(❌)을 최소 한 칸 이상 띄워야 해요! 1칸 칠하고, 띄우고, 또 1칸 칠해 보세요!",
+                clue: [1, 1],
+                anyPattern: [1, 1],
+                hintMsg: "색칠한 두 칸이 서로 붙지 않게 떨어뜨려 칠해 보세요! (예: ●○●○○)"
+            },
+            {
+                id: 'tut_6',
+                label: '2 2',
+                title: "미션 6: 숫자 '2  2' 반반 나누기!",
+                desc: "숫자 '2  2'는 두 칸 칠하고, 가운데 한 칸을 비우고, 다시 두 칸을 칠하는 거예요! 어디를 칠해야 할지 맞춰 볼까요?",
+                clue: [2, 2],
+                target: [1, 1, 0, 1, 1],
+                hintMsg: "왼쪽 두 칸(●●), 가운데 한 칸 비우기(○), 오른쪽 두 칸(●●)을 칠해 보세요!"
+            },
+            {
+                id: 'tut_7',
+                label: '3 1',
+                title: "미션 7: 숫자 '3  1' 순서대로 칠하기!",
+                desc: "숫자 '3  1'은 왼쪽에 먼저 3칸을 이어서 칠하고, 한 칸 비운 뒤, 맨 오른쪽에 1칸을 칠하라는 뜻이에요!",
+                clue: [3, 1],
+                target: [1, 1, 1, 0, 1],
+                hintMsg: "왼쪽부터 세 칸(●●●) 칠하고, 네 번째 칸은 비우고(○), 마지막 칸(●)을 칠해 보세요!"
+            },
+            {
+                id: 'tut_8',
+                label: '1 1 1',
+                title: "미션 8: 숫자 '1 1 1' 징검다리 건너기!",
+                desc: "마지막 미션! 숫자 '1  1  1'은 징검다리처럼 한 칸 칠하고, 한 칸 띄우기를 세 번 반복하는 거예요!",
+                clue: [1, 1, 1],
+                target: [1, 0, 1, 0, 1],
+                hintMsg: "첫 번째(●), 세 번째(●), 다섯 번째(●) 칸을 징검다리처럼 퐁당퐁당 칠해 보세요!"
+            }
+        ];
+
+        const PUZZLES = [
+            // ================= 2단계: 아기 네모 3x3 (총 10개 미션) =================
+            {
+                id: 'p3_cross', category: '3x3', name: '빨간 십자가', emoji: '🚑',
+                story: '삐뽀삐뽀! 다친 곳을 치료해 주는 구급상자 십자가 마크예요!', size: 3,
+                solution: [
+                    [0, 1, 0],
+                    [1, 1, 1],
+                    [0, 1, 0]
+                ],
+                colors: [
+                    ['#FFF', '#EF4444', '#FFF'],
+                    ['#EF4444', '#DC2626', '#EF4444'],
+                    ['#FFF', '#EF4444', '#FFF']
+                ]
+            },
+            {
+                id: 'p3_crown', category: '3x3', name: '노란 왕관', emoji: '👑',
+                story: '반짝반짝 빛나는 아기 왕자님·공주님의 노란 왕관이에요!', size: 3,
+                solution: [
+                    [1, 0, 1],
+                    [1, 1, 1],
+                    [1, 1, 1]
+                ],
+                colors: [
+                    ['#FACC15', '#FFF', '#FACC15'],
+                    ['#FBBF24', '#EF4444', '#FBBF24'],
+                    ['#D97706', '#F59E0B', '#D97706']
+                ]
+            },
+            {
+                id: 'p3_heart', category: '3x3', name: '아기 하트', emoji: '💖',
+                story: '사랑이 퐁퐁 솟아나는 귀엽고 작은 분홍 하트예요!', size: 3,
+                solution: [
+                    [1, 0, 1],
+                    [1, 1, 1],
+                    [0, 1, 0]
+                ],
+                colors: [
+                    ['#FB7185', '#FFF', '#FB7185'],
+                    ['#F43F5E', '#E11D48', '#F43F5E'],
+                    ['#FFF', '#BE123C', '#FFF']
+                ]
+            },
+            {
+                id: 'p3_umbrella', category: '3x3', name: '파란 우산', emoji: '☔',
+                story: '비를 막아주는 시원한 파란색 미니 우산이에요!', size: 3,
+                solution: [
+                    [1, 1, 1],
+                    [0, 1, 0],
+                    [0, 1, 0]
+                ],
+                colors: [
+                    ['#38BDF8', '#0284C7', '#38BDF8'],
+                    ['#FFF', '#94A3B8', '#FFF'],
+                    ['#FFF', '#F59E0B', '#FFF']
+                ]
+            },
+            {
+                id: 'p3_tree', category: '3x3', name: '초록 나무', emoji: '🌲',
+                story: '숲속에서 쑥쑥 자라나는 푸른 아기 나무예요!', size: 3,
+                solution: [
+                    [0, 1, 0],
+                    [1, 1, 1],
+                    [0, 1, 0]
+                ],
+                colors: [
+                    ['#FFF', '#4ADE80', '#FFF'],
+                    ['#22C55E', '#16A34A', '#22C55E'],
+                    ['#FFF', '#92400E', '#FFF']
+                ]
+            },
+            {
+                id: 'p3_diamond', category: '3x3', name: '반짝 보석', emoji: '💎',
+                story: '보물상자 속에서 찾은 영롱한 하늘색 다이아몬드예요!', size: 3,
+                solution: [
+                    [1, 1, 0],
+                    [1, 1, 1],
+                    [0, 1, 1]
+                ],
+                colors: [
+                    ['#38BDF8', '#0284C7', '#E0F2FE'],
+                    ['#0284C7', '#BAE6FD', '#0284C7'],
+                    ['#E0F2FE', '#0284C7', '#0369A1']
+                ]
+            },
+            {
+                id: 'p3_chair', category: '3x3', name: '귀여운 의자', emoji: '🪑',
+                story: '인형 친구가 앉기에 딱 좋은 작은 나무 의자예요!', size: 3,
+                solution: [
+                    [1, 0, 0],
+                    [1, 1, 1],
+                    [1, 0, 1]
+                ],
+                colors: [
+                    ['#D97706', '#FFF', '#FFF'],
+                    ['#B45309', '#D97706', '#B45309'],
+                    ['#78350F', '#FFF', '#78350F']
+                ]
+            },
+            {
+                id: 'p3_donut', category: '3x3', name: '달콤 도넛', emoji: '🍩',
+                story: '가운데가 뽕 뚫린 달콤한 딸기 초코 도넛이에요!', size: 3,
+                solution: [
+                    [1, 1, 1],
+                    [1, 0, 1],
+                    [1, 1, 1]
+                ],
+                colors: [
+                    ['#F472B6', '#EC4899', '#F472B6'],
+                    ['#EC4899', '#FFF', '#DB2777'],
+                    ['#92400E', '#78350F', '#92400E']
+                ]
+            },
+            {
+                id: 'p3_stairs', category: '3x3', name: '층층 계단', emoji: '🪜',
+                story: '한 칸, 두 칸, 세 칸! 영차영차 올라가는 무지개 계단이에요!', size: 3,
+                solution: [
+                    [0, 0, 1],
+                    [0, 1, 1],
+                    [1, 1, 1]
+                ],
+                colors: [
+                    ['#FFF', '#FFF', '#F43F5E'],
+                    ['#FFF', '#FBBF24', '#F59E0B'],
+                    ['#38BDF8', '#0284C7', '#0369A1']
+                ]
+            },
+            {
+                id: 'p3_smile', category: '3x3', name: '웃는 얼굴', emoji: '😄',
+                story: '반짝이는 두 눈과 활짝 웃는 입! 기분 좋은 미소예요!', size: 3,
+                solution: [
+                    [1, 0, 1],
+                    [0, 0, 0],
+                    [1, 1, 1]
+                ],
+                colors: [
+                    ['#1E293B', '#FEF08A', '#1E293B'],
+                    ['#FDE047', '#FEF08A', '#FDE047'],
+                    ['#EA580C', '#DC2626', '#EA580C']
+                ]
+            },
+
+            // ================= 3단계: 쑥쑥 네모 4x4 (총 10개 미션 - 모두 100% 유일해 검증 완료) =================
+            {
+                id: 'p4_duck', category: '4x4', name: '아기 오리', emoji: '🐤',
+                story: '꽥꽥! 연못 위를 헤엄치는 노란 아기 오리예요!', size: 4,
+                solution: [
+                    [0, 1, 1, 0],
+                    [0, 0, 1, 0],
+                    [1, 1, 1, 1],
+                    [0, 1, 1, 1]
+                ],
+                colors: [
+                    ['#FFF', '#FACC15', '#FB923C', '#FFF'],
+                    ['#FFF', '#FFF', '#FACC15', '#FFF'],
+                    ['#FDE047', '#FACC15', '#EAB308', '#FACC15'],
+                    ['#BAE6FD', '#CA8A04', '#CA8A04', '#0284C7']
+                ]
+            },
+            {
+                id: 'p4_boat', category: '4x4', name: '둥실 돛단배', emoji: '⛵',
+                story: '푸른 바다 위를 시원하게 달리는 돛단배예요!', size: 4,
+                solution: [
+                    [0, 1, 0, 0],
+                    [0, 1, 1, 0],
+                    [1, 1, 1, 1],
+                    [0, 1, 1, 1]
+                ],
+                colors: [
+                    ['#E0F2FE', '#F43F5E', '#E0F2FE', '#E0F2FE'],
+                    ['#E0F2FE', '#38BDF8', '#0284C7', '#E0F2FE'],
+                    ['#92400E', '#B45309', '#B45309', '#78350F'],
+                    ['#BAE6FD', '#78350F', '#78350F', '#38BDF8']
+                ]
+            },
+            {
+                id: 'p4_apple', category: '4x4', name: '빨간 사과', emoji: '🍎',
+                story: '아삭아삭 새콤달콤! 꼭지가 달린 잘 익은 사과예요!', size: 4,
+                solution: [
+                    [0, 0, 1, 0],
+                    [0, 1, 1, 1],
+                    [1, 1, 1, 1],
+                    [0, 1, 1, 0]
+                ],
+                colors: [
+                    ['#FFF', '#FFF', '#22C55E', '#FFF'],
+                    ['#FFF', '#FB7185', '#EF4444', '#DC2626'],
+                    ['#FB7185', '#EF4444', '#DC2626', '#B91C1C'],
+                    ['#FFF', '#DC2626', '#991B1B', '#FFF']
+                ]
+            },
+            {
+                id: 'p4_house', category: '4x4', name: '튼튼한 집', emoji: '🏠',
+                story: '빨간 지붕과 예쁜 문이 있는 포근한 우리 집이에요!', size: 4,
+                solution: [
+                    [0, 1, 1, 0],
+                    [1, 1, 1, 1],
+                    [1, 1, 1, 1],
+                    [1, 0, 1, 1]
+                ],
+                colors: [
+                    ['#FFF', '#EF4444', '#DC2626', '#FFF'],
+                    ['#EF4444', '#DC2626', '#B91C1C', '#991B1B'],
+                    ['#FEF3C7', '#38BDF8', '#FEF3C7', '#FDE68A'],
+                    ['#FDE68A', '#FFF', '#92400E', '#FDE68A']
+                ]
+            },
+            {
+                id: 'p4_cup', category: '4x4', name: '귀여운 컵', emoji: '☕',
+                story: '손잡이가 달린 따뜻한 우유 머그컵이에요!', size: 4,
+                solution: [
+                    [1, 1, 1, 0],
+                    [1, 1, 1, 1],
+                    [1, 1, 1, 0],
+                    [0, 1, 1, 0]
+                ],
+                colors: [
+                    ['#60A5FA', '#3B82F6', '#2563EB', '#FFF'],
+                    ['#3B82F6', '#93C5FD', '#2563EB', '#1D4ED8'],
+                    ['#2563EB', '#3B82F6', '#1D4ED8', '#FFF'],
+                    ['#FFF', '#1D4ED8', '#1E3A8A', '#FFF']
+                ]
+            },
+            {
+                id: 'p4_crab', category: '4x4', name: '집게 꽃게', emoji: '🦀',
+                story: '모래사장에서 옆으로 걸어 다니는 빨간 꽃게예요!', size: 4,
+                solution: [
+                    [1, 0, 0, 1],
+                    [1, 1, 1, 1],
+                    [0, 1, 1, 0],
+                    [1, 1, 1, 1]
+                ],
+                colors: [
+                    ['#EF4444', '#FFF', '#FFF', '#EF4444'],
+                    ['#DC2626', '#EF4444', '#EF4444', '#DC2626'],
+                    ['#FFF', '#B91C1C', '#B91C1C', '#FFF'],
+                    ['#EA580C', '#DC2626', '#DC2626', '#EA580C']
+                ]
+            },
+            {
+                id: 'p4_bolt', category: '4x4', name: '번쩍 번개', emoji: '⚡',
+                story: '우르릉 쾅쾅! 하늘에서 반짝 빛나는 노란 번개예요!', size: 4,
+                // 가로: [2], [3], [3], [1] / 세로: [1], [3], [4], [1] -> 수학적 100% 유일해!
+                solution: [
+                    [0, 1, 1, 0],
+                    [1, 1, 1, 0],
+                    [0, 1, 1, 1],
+                    [0, 0, 1, 0]
+                ],
+                colors: [
+                    ['#1E293B', '#FEF08A', '#FACC15', '#1E293B'],
+                    ['#FEF08A', '#FACC15', '#EAB308', '#1E293B'],
+                    ['#1E293B', '#FACC15', '#EAB308', '#CA8A04'],
+                    ['#1E293B', '#1E293B', '#CA8A04', '#1E293B']
+                ]
+            },
+            {
+                id: 'p4_moon', category: '4x4', name: '밤하늘 초승달', emoji: '🌙',
+                story: '까만 밤하늘에 예쁘게 떠 있는 노란 초승달이에요!', size: 4,
+                // 가로: [3], [2], [2], [4] / 세로: [3], [4], [2], [2] -> 수학적 100% 유일해!
+                solution: [
+                    [0, 1, 1, 1],
+                    [1, 1, 0, 0],
+                    [1, 1, 0, 0],
+                    [1, 1, 1, 1]
+                ],
+                colors: [
+                    ['#1E1B4B', '#FEF08A', '#FDE047', '#FACC15'],
+                    ['#FEF08A', '#FACC15', '#1E1B4B', '#1E1B4B'],
+                    ['#FDE047', '#EAB308', '#1E1B4B', '#1E1B4B'],
+                    ['#FACC15', '#EAB308', '#CA8A04', '#A16207']
+                ]
+            },
+            {
+                id: 'p4_puppy', category: '4x4', name: '아기 강아지', emoji: '🐕',
+                story: '귀를 쫑긋 세우고 꼬리를 흔드는 귀여운 강아지예요!', size: 4,
+                // 가로: [1,1], [4], [3], [1,1] / 세로: [4], [2], [4], [1] -> 수학적 100% 유일해!
+                solution: [
+                    [1, 0, 1, 0],
+                    [1, 1, 1, 1],
+                    [1, 1, 1, 0],
+                    [1, 0, 1, 0]
+                ],
+                colors: [
+                    ['#92400E', '#FFF', '#92400E', '#FFF'],
+                    ['#B45309', '#D97706', '#F59E0B', '#92400E'],
+                    ['#D97706', '#F59E0B', '#B45309', '#FFF'],
+                    ['#78350F', '#FFF', '#78350F', '#FFF']
+                ]
+            },
+            {
+                id: 'p4_gift', category: '4x4', name: '깜짝 선물상자', emoji: '🎁',
+                story: '예쁜 리본이 묶여 있는 두근두근 생일 선물 상자예요!', size: 4,
+                solution: [
+                    [0, 1, 1, 0],
+                    [1, 1, 1, 1],
+                    [1, 0, 0, 1],
+                    [1, 1, 1, 1]
+                ],
+                colors: [
+                    ['#FFF', '#F43F5E', '#F43F5E', '#FFF'],
+                    ['#FBBF24', '#F43F5E', '#F43F5E', '#FBBF24'],
+                    ['#F59E0B', '#FEF3C7', '#FEF3C7', '#F59E0B'],
+                    ['#D97706', '#F43F5E', '#F43F5E', '#D97706']
+                ]
+            },
+
+            // ================= 4단계: 척척박사 5x5 (총 12개 미션 - 모두 100% 유일해 검증 완료) =================
+            {
+                id: 'p5_heart', category: '5x5', name: '사랑 가득 하트', emoji: '❤️',
+                story: '두근두근! 사랑하는 마음으로 가득 찬 예쁜 빨간 하트예요!', size: 5,
+                solution: [
+                    [0, 1, 0, 1, 0],
+                    [1, 1, 1, 1, 1],
+                    [1, 1, 1, 1, 1],
+                    [0, 1, 1, 1, 0],
+                    [0, 0, 1, 0, 0]
+                ],
+                colors: [
+                    ['#FFF', '#FB7185', '#FFF', '#FB7185', '#FFF'],
+                    ['#FB7185', '#F43F5E', '#E11D48', '#F43F5E', '#E11D48'],
+                    ['#F43F5E', '#E11D48', '#BE123C', '#E11D48', '#BE123C'],
+                    ['#FFF', '#E11D48', '#BE123C', '#9F1239', '#FFF'],
+                    ['#FFF', '#FFF', '#881337', '#FFF', '#FFF']
+                ]
+            },
+            {
+                id: 'p5_smile', category: '5x5', name: '웃는 스마일', emoji: '😊',
+                story: '볼이 발그레~ 보기만 해도 행복해지는 웃는 얼굴이에요!', size: 5,
+                solution: [
+                    [0, 1, 0, 1, 0],
+                    [0, 1, 0, 1, 0],
+                    [0, 0, 0, 0, 0],
+                    [1, 0, 0, 0, 1],
+                    [0, 1, 1, 1, 0]
+                ],
+                colors: [
+                    ['#FEF08A', '#1E293B', '#FEF08A', '#1E293B', '#FEF08A'],
+                    ['#FEF08A', '#334155', '#FEF08A', '#334155', '#FEF08A'],
+                    ['#FDE047', '#FEF08A', '#FEF08A', '#FEF08A', '#FDE047'],
+                    ['#FB7185', '#FEF08A', '#FEF08A', '#FEF08A', '#FB7185'],
+                    ['#FEF08A', '#EA580C', '#DC2626', '#EA580C', '#FEF08A']
+                ]
+            },
+            {
+                id: 'p5_tulip', category: '5x5', name: '봄날의 튤립', emoji: '🌷',
+                story: '따스한 봄바람에 활짝 피어난 향기로운 튤립 꽃이에요!', size: 5,
+                solution: [
+                    [1, 0, 1, 0, 1],
+                    [1, 1, 1, 1, 1],
+                    [0, 1, 1, 1, 0],
+                    [0, 0, 1, 0, 0],
+                    [0, 1, 1, 1, 0]
+                ],
+                colors: [
+                    ['#F43F5E', '#FFF', '#FB7185', '#FFF', '#F43F5E'],
+                    ['#F43F5E', '#FB7185', '#F43F5E', '#FB7185', '#E11D48'],
+                    ['#FFF', '#E11D48', '#BE123C', '#E11D48', '#FFF'],
+                    ['#FFF', '#FFF', '#22C55E', '#FFF', '#FFF'],
+                    ['#FFF', '#16A34A', '#15803D', '#16A34A', '#FFF']
+                ]
+            },
+            {
+                id: 'p5_cat', category: '5x5', name: '아기 고양이', emoji: '🐱',
+                story: '야옹~ 쫑긋한 두 귀와 귀여운 코를 가진 아기 고양이예요!', size: 5,
+                solution: [
+                    [1, 0, 0, 0, 1],
+                    [1, 1, 1, 1, 1],
+                    [1, 0, 1, 0, 1],
+                    [1, 1, 1, 1, 1],
+                    [0, 1, 1, 1, 0]
+                ],
+                colors: [
+                    ['#F59E0B', '#FFF', '#FFF', '#FFF', '#F59E0B'],
+                    ['#FBBF24', '#FDE68A', '#FBBF24', '#FDE68A', '#FBBF24'],
+                    ['#FBBF24', '#1E293B', '#FDE68A', '#1E293B', '#FBBF24'],
+                    ['#F59E0B', '#FB7185', '#F43F5E', '#FB7185', '#F59E0B'],
+                    ['#FFF', '#D97706', '#B45309', '#D97706', '#FFF']
+                ]
+            },
+            {
+                id: 'p5_icecream', category: '5x5', name: '시원한 아이스크림', emoji: '🍦',
+                story: '더운 날 먹으면 최고! 달콤한 딸기 바닐라 콘 아이스크림이에요!', size: 5,
+                solution: [
+                    [0, 1, 1, 1, 0],
+                    [1, 1, 1, 1, 1],
+                    [0, 1, 1, 1, 0],
+                    [0, 0, 1, 0, 0],
+                    [0, 0, 1, 0, 0]
+                ],
+                colors: [
+                    ['#FFF', '#F472B6', '#EC4899', '#F472B6', '#FFF'],
+                    ['#FBCFE8', '#F472B6', '#FEF08A', '#F472B6', '#FBCFE8'],
+                    ['#FFF', '#D97706', '#B45309', '#D97706', '#FFF'],
+                    ['#FFF', '#FFF', '#B45309', '#FFF', '#FFF'],
+                    ['#FFF', '#FFF', '#78350F', '#FFF', '#FFF']
+                ]
+            },
+            {
+                id: 'p5_umbrella', category: '5x5', name: '알록달록 우산', emoji: '☂️',
+                story: '토독토독 비 오는 날이 기다려지는 무지개 우산이에요!', size: 5,
+                solution: [
+                    [0, 1, 1, 1, 0],
+                    [1, 1, 1, 1, 1],
+                    [0, 0, 1, 0, 0],
+                    [1, 0, 1, 0, 0],
+                    [1, 1, 1, 0, 0]
+                ],
+                colors: [
+                    ['#FFF', '#A855F7', '#EC4899', '#A855F7', '#FFF'],
+                    ['#38BDF8', '#A855F7', '#FACC15', '#EC4899', '#38BDF8'],
+                    ['#FFF', '#FFF', '#64748B', '#FFF', '#FFF'],
+                    ['#F59E0B', '#FFF', '#64748B', '#FFF', '#FFF'],
+                    ['#D97706', '#F59E0B', '#D97706', '#FFF', '#FFF']
+                ]
+            },
+            {
+                id: 'p5_airplane', category: '5x5', name: '하늘 나는 비행기', emoji: '✈️',
+                story: '슈우웅~ 구름 위를 멋지게 날아가는 하늘색 비행기예요!', size: 5,
+                solution: [
+                    [0, 0, 1, 0, 0],
+                    [0, 1, 1, 1, 0],
+                    [1, 1, 1, 1, 1],
+                    [0, 0, 1, 0, 0],
+                    [0, 1, 1, 1, 0]
+                ],
+                colors: [
+                    ['#FFF', '#FFF', '#38BDF8', '#FFF', '#FFF'],
+                    ['#FFF', '#7DD3FC', '#0284C7', '#7DD3FC', '#FFF'],
+                    ['#0284C7', '#0369A1', '#075985', '#0369A1', '#0284C7'],
+                    ['#FFF', '#FFF', '#0369A1', '#FFF', '#FFF'],
+                    ['#FFF', '#EF4444', '#075985', '#EF4444', '#FFF']
+                ]
+            },
+            {
+                id: 'p5_fish', category: '5x5', name: '바다 물고기', emoji: '🐟',
+                story: '푸른 바닷속을 요리조리 헤엄치는 귀여운 열대어예요!', size: 5,
+                solution: [
+                    [0, 1, 1, 0, 0],
+                    [1, 1, 1, 1, 1],
+                    [1, 1, 1, 0, 1],
+                    [1, 1, 1, 1, 1],
+                    [0, 0, 1, 0, 0]
+                ],
+                colors: [
+                    ['#E0F2FE', '#38BDF8', '#0284C7', '#E0F2FE', '#E0F2FE'],
+                    ['#FACC15', '#38BDF8', '#FACC15', '#0284C7', '#FB923C'],
+                    ['#1E293B', '#38BDF8', '#0284C7', '#E0F2FE', '#EA580C'],
+                    ['#0284C7', '#FACC15', '#0284C7', '#0369A1', '#FB923C'],
+                    ['#E0F2FE', '#E0F2FE', '#0284C7', '#E0F2FE', '#E0F2FE']
+                ]
+            },
+            {
+                id: 'p5_butterfly', category: '5x5', name: '팔랑팔랑 나비', emoji: '🦋',
+                story: '꽃밭을 날아다니는 아름다운 날개의 보라빛 나비예요!', size: 5,
+                solution: [
+                    [1, 0, 0, 0, 1],
+                    [1, 1, 1, 1, 1],
+                    [0, 1, 1, 1, 0],
+                    [1, 1, 1, 1, 1],
+                    [1, 0, 0, 0, 1]
+                ],
+                colors: [
+                    ['#EC4899', '#FFF', '#FFF', '#FFF', '#EC4899'],
+                    ['#F472B6', '#A855F7', '#475569', '#A855F7', '#F472B6'],
+                    ['#FFF', '#FACC15', '#334155', '#FACC15', '#FFF'],
+                    ['#A855F7', '#9333EA', '#1E293B', '#9333EA', '#A855F7'],
+                    ['#7E22CE', '#FFF', '#FFF', '#FFF', '#7E22CE']
+                ]
+            },
+            {
+                id: 'p5_rocket', category: '5x5', name: '우주 탐험 로켓', emoji: '🚀',
+                story: '3, 2, 1 발사! 불꽃을 내뿜으며 우주로 날아가는 로켓이에요!', size: 5,
+                solution: [
+                    [0, 0, 1, 0, 0],
+                    [0, 1, 1, 1, 0],
+                    [0, 1, 0, 1, 0],
+                    [1, 1, 1, 1, 1],
+                    [1, 0, 1, 0, 1]
+                ],
+                colors: [
+                    ['#FFF', '#FFF', '#EF4444', '#FFF', '#FFF'],
+                    ['#FFF', '#E2E8F0', '#DC2626', '#E2E8F0', '#FFF'],
+                    ['#FFF', '#CBD5E1', '#38BDF8', '#CBD5E1', '#FFF'],
+                    ['#EF4444', '#94A3B8', '#64748B', '#94A3B8', '#EF4444'],
+                    ['#DC2626', '#FFF', '#FACC15', '#FFF', '#DC2626']
+                ]
+            },
+            {
+                id: 'p5_crown', category: '5x5', name: '황금 왕관', emoji: '👑',
+                story: '네모로직 척척박사님에게 수여하는 빛나는 황금 왕관이에요!', size: 5,
+                solution: [
+                    [1, 0, 1, 0, 1],
+                    [1, 1, 1, 1, 1],
+                    [1, 0, 1, 0, 1],
+                    [1, 1, 1, 1, 1],
+                    [0, 1, 1, 1, 0]
+                ],
+                colors: [
+                    ['#FACC15', '#FFF', '#FACC15', '#FFF', '#FACC15'],
+                    ['#FACC15', '#FBBF24', '#F59E0B', '#FBBF24', '#FACC15'],
+                    ['#F59E0B', '#EF4444', '#F59E0B', '#3B82F6', '#F59E0B'],
+                    ['#D97706', '#F59E0B', '#D97706', '#F59E0B', '#D97706'],
+                    ['#FFF', '#B45309', '#B45309', '#B45309', '#FFF']
+                ]
+            },
+            {
+                id: 'p5_xmas', category: '5x5', name: '크리스마스 트리', emoji: '🎄',
+                story: '반짝이는 장식이 달린 신나는 크리스마스 트리예요!', size: 5,
+                solution: [
+                    [0, 0, 1, 0, 0],
+                    [0, 1, 1, 1, 0],
+                    [0, 0, 1, 0, 0],
+                    [1, 1, 1, 1, 1],
+                    [0, 0, 1, 0, 0]
+                ],
+                colors: [
+                    ['#FFF', '#FFF', '#FACC15', '#FFF', '#FFF'],
+                    ['#FFF', '#22C55E', '#EF4444', '#22C55E', '#FFF'],
+                    ['#FFF', '#FFF', '#16A34A', '#FFF', '#FFF'],
+                    ['#22C55E', '#38BDF8', '#15803D', '#FACC15', '#22C55E'],
+                    ['#FFF', '#FFF', '#78350F', '#FFF', '#FFF']
+                ]
+            }
+        ];
+
+        /* =========================================================================
+           3. 상태 관리 및 로컬 스토리지 (퍼즐 32종 + 튜토리얼 8종 저장)
+           ========================================================================= */
+        let clearedPuzzles = new Set();
+        let clearedTutorials = new Set();
+        const STORAGE_KEY = 'malang_nonogram_cleared_v2';
+        const TUT_STORAGE_KEY = 'malang_nonogram_tut_v2';
+
+        function loadProgress() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) clearedPuzzles = new Set(JSON.parse(saved));
+                const savedTut = localStorage.getItem(TUT_STORAGE_KEY);
+                if (savedTut) clearedTutorials = new Set(JSON.parse(savedTut));
+            } catch (e) {
+                clearedPuzzles = new Set();
+                clearedTutorials = new Set();
+            }
+            updateProgressUI();
+        }
+
+        function saveProgress() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify([...clearedPuzzles]));
+                localStorage.setItem(TUT_STORAGE_KEY, JSON.stringify([...clearedTutorials]));
+            } catch (e) {}
+            updateProgressUI();
+        }
+
+        function updateProgressUI() {
+            const countEl = document.getElementById('headerStickerCount');
+            if (countEl) countEl.textContent = `${clearedPuzzles.size}/${PUZZLES.length}`;
+
+            // 홈 화면 카드 진행도 업데이트
+            const cTut = document.getElementById('homeCountTut');
+            if (cTut) cTut.textContent = `${clearedTutorials.size} / ${TUTORIAL_STEPS.length} 완료`;
+
+            ['3x3', '4x4', '5x5'].forEach(cat => {
+                const total = PUZZLES.filter(p => p.category === cat).length;
+                const done = PUZZLES.filter(p => p.category === cat && clearedPuzzles.has(p.id)).length;
+                const el = document.getElementById(`homeCount${cat}`);
+                if (el) el.textContent = `${done} / ${total} 완료`;
+            });
+        }
+
+        function openResetConfirmModal() {
+            const m = document.getElementById('resetModal');
+            m.classList.remove('hidden');
+            m.classList.add('flex');
+        }
+
+        function closeResetConfirmModal() {
+            const m = document.getElementById('resetModal');
+            m.classList.add('hidden');
+            m.classList.remove('flex');
+        }
+
+        function confirmResetProgress() {
+            clearedPuzzles.clear();
+            clearedTutorials.clear();
+            saveProgress();
+            closeResetConfirmModal();
+            renderStickerBook('all');
+            playSound('erase');
+        }
+
+        /* =========================================================================
+           4. 화면 전환 및 상단 탭 활성화 표시
+           ========================================================================= */
+        function highlightTopTab(activeKey) {
+            const tabs = {
+                'tut': { id: 'tab-tut', activeCls: 'bg-emerald-400 text-white border-emerald-600 scale-102', idleCls: 'bg-emerald-50 border-emerald-300 text-emerald-800' },
+                '3x3': { id: 'tab-3x3', activeCls: 'bg-amber-400 text-white border-amber-600 scale-102', idleCls: 'bg-amber-50 border-amber-300 text-amber-800' },
+                '4x4': { id: 'tab-4x4', activeCls: 'bg-sky-400 text-white border-sky-600 scale-102', idleCls: 'bg-sky-50 border-sky-300 text-sky-800' },
+                '5x5': { id: 'tab-5x5', activeCls: 'bg-violet-400 text-white border-violet-600 scale-102', idleCls: 'bg-violet-50 border-violet-300 text-violet-800' }
+            };
+            Object.keys(tabs).forEach(k => {
+                const el = document.getElementById(tabs[k].id);
+                if (!el) return;
+                const base = "stage-tab btn-cute py-1.5 sm:py-2 px-1 sm:px-3 rounded-2xl border-2 text-xs sm:text-base flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 transition-all ";
+                el.className = base + (k === activeKey ? tabs[k].activeCls : tabs[k].idleCls);
+            });
+        }
+
+        function showScreen(screenName) {
+            const screens = ['home', 'tutorial', 'levels', 'game', 'stickerbook'];
+            screens.forEach(s => {
+                const el = document.getElementById(`screen-${s}`);
+                if (el) {
+                    if (s === screenName) {
+                        el.classList.remove('hidden');
+                        el.classList.add('flex');
+                    } else {
+                        el.classList.add('hidden');
+                        el.classList.remove('flex');
+                    }
+                }
+            });
+
+            if (screenName === 'home' || screenName === 'stickerbook') {
+                highlightTopTab(null);
+                updateProgressUI();
+            }
+            if (screenName === 'stickerbook') {
+                renderStickerBook('all');
+            }
+        }
+
+        /* =========================================================================
+           5. 1단계: 한 줄 배우기 튜토리얼 로직 (총 8개 미션)
+           ========================================================================= */
+        let currentTutIndex = 0;
+        let tutBoard = [0, 0, 0, 0, 0]; // 0: 빈칸, 1: 색칠, 2: X표시
+        let tutTool = 'fill';
+        let isTutDragging = false;
+        let tutDragActionValue = null;
+
+        function startTutorial(stepIndex = 0) {
+            currentTutIndex = stepIndex;
+            showScreen('tutorial');
+            highlightTopTab('tut');
+            loadTutorialStep();
+        }
+
+        function setTutTool(tool) {
+            tutTool = tool;
+            const fillBtn = document.getElementById('tutToolFill');
+            const xBtn = document.getElementById('tutToolX');
+            if (tool === 'fill') {
+                fillBtn.className = "btn-cute flex-1 max-w-[170px] py-2.5 px-4 rounded-2xl border-4 text-lg flex items-center justify-center gap-2 bg-sky-400 text-white border-sky-600";
+                xBtn.className = "btn-cute flex-1 max-w-[170px] py-2.5 px-4 rounded-2xl border-4 text-lg flex items-center justify-center gap-2 bg-white text-slate-600 border-slate-300";
+            } else {
+                xBtn.className = "btn-cute flex-1 max-w-[170px] py-2.5 px-4 rounded-2xl border-4 text-lg flex items-center justify-center gap-2 bg-rose-400 text-white border-rose-600";
+                fillBtn.className = "btn-cute flex-1 max-w-[170px] py-2.5 px-4 rounded-2xl border-4 text-lg flex items-center justify-center gap-2 bg-white text-slate-600 border-slate-300";
+            }
+            playSound('erase');
+        }
+
+        function renderTutorialMissionButtons() {
+            const container = document.getElementById('tutMissionBtns');
+            container.innerHTML = '';
+            TUTORIAL_STEPS.forEach((step, idx) => {
+                const isDone = clearedTutorials.has(step.id);
+                const isCurrent = idx === currentTutIndex;
+                const btn = document.createElement('button');
+                btn.className = `btn-cute py-1.5 px-1 rounded-xl border-2 text-xs sm:text-sm flex flex-col items-center justify-center leading-tight transition ${
+                    isCurrent
+                        ? 'bg-emerald-500 text-white border-emerald-700 scale-105'
+                        : isDone
+                            ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                            : 'bg-white text-slate-600 border-slate-300'
+                }`;
+                btn.onclick = () => {
+                    currentTutIndex = idx;
+                    loadTutorialStep();
+                };
+                btn.innerHTML = `
+                    <span class="font-bold">${idx + 1}번 ${isDone ? '⭐' : ''}</span>
+                    <span class="text-[11px] opacity-85">[${step.label}]</span>
+                `;
+                container.appendChild(btn);
+            });
+        }
+
+        function loadTutorialStep() {
+            const step = TUTORIAL_STEPS[currentTutIndex];
+            tutBoard = [0, 0, 0, 0, 0];
+
+            setTutTool(step.requireAllX ? 'x' : 'fill');
+
+            document.getElementById('tutTitle').textContent = step.title;
+            document.getElementById('tutDesc').textContent = step.desc;
+            document.getElementById('tutStepLabel').textContent = `미션 ${currentTutIndex + 1} / ${TUTORIAL_STEPS.length}`;
+            document.getElementById('tutFeedback').textContent = step.hintMsg;
+            document.getElementById('tutFeedback').className = "mt-4 text-base sm:text-xl text-amber-700 min-h-[2rem] text-center px-2";
+
+            // 힌트 숫자 표시
+            const clueBox = document.getElementById('tutClueBox');
+            clueBox.innerHTML = step.clue.map(n => `<span>${n}</span>`).join('<span class="text-amber-400 text-lg">·</span>');
+            clueBox.classList.remove('clue-done');
+
+            document.getElementById('tutPrevBtn').style.visibility = currentTutIndex === 0 ? 'hidden' : 'visible';
+            document.getElementById('tutNextBtn').classList.add('hidden');
+
+            renderTutorialMissionButtons();
+            renderTutorialGrid();
+        }
+
+        function renderTutorialGrid() {
+            const grid = document.getElementById('tutGrid');
+            grid.innerHTML = '';
+            grid.oncontextmenu = (e) => e.preventDefault();
+
+            tutBoard.forEach((val, idx) => {
+                const btn = document.createElement('button');
+                btn.type = "button";
+                btn.dataset.tutIdx = idx;
+                let cellStyle = "cell w-12 h-12 sm:w-14 sm:h-14 rounded-xl border-2 flex items-center justify-center text-2xl sm:text-3xl font-bold select-none ";
+                if (val === 1) {
+                    cellStyle += "cell-filled text-white";
+                } else if (val === 2) {
+                    cellStyle += "cell-x border-slate-300 text-rose-400";
+                    btn.innerHTML = "✖";
+                } else {
+                    cellStyle += "bg-white border-slate-300 hover:bg-sky-50";
+                }
+                btn.className = cellStyle;
+
+                btn.addEventListener('contextmenu', (e) => e.preventDefault());
+
+                btn.addEventListener('pointerdown', (e) => {
+                    e.preventDefault();
+                    if (btn.releasePointerCapture) {
+                        try { btn.releasePointerCapture(e.pointerId); } catch (_) {}
+                    }
+                    handleTutPointerDown(idx, e);
+                });
+
+                btn.addEventListener('pointerenter', () => {
+                    if (isTutDragging) {
+                        handleTutPointerEnter(idx);
+                    }
+                });
+
+                grid.appendChild(btn);
+            });
+        }
+
+        function handleTutPointerDown(idx, e) {
+            isTutDragging = true;
+            const currentVal = tutBoard[idx];
+
+            // 마우스 우클릭(button === 2)이면 현재 도구와 상관없이 즉시 X(2) 표시/해제
+            let targetVal;
+            if (e && e.button === 2) {
+                targetVal = 2;
+            } else {
+                targetVal = tutTool === 'fill' ? 1 : 2;
+            }
+
+            tutDragActionValue = currentVal === targetVal ? 0 : targetVal;
+            applyTutCellChange(idx, tutDragActionValue);
+        }
+
+        function handleTutPointerEnter(idx) {
+            if (!isTutDragging || tutDragActionValue === null) return;
+            if (tutBoard[idx] !== tutDragActionValue) {
+                applyTutCellChange(idx, tutDragActionValue);
+            }
+        }
+
+        function applyTutCellChange(idx, newVal) {
+            tutBoard[idx] = newVal;
+            if (newVal === 1) playSound('fill');
+            else if (newVal === 2) playSound('x');
+            else playSound('erase');
+
+            renderTutorialGrid();
+            checkTutorialStepSuccess();
+        }
+
+        function getLinePattern(arr) {
+            const groups = [];
+            let count = 0;
+            for (let v of arr) {
+                if (v === 1) {
+                    count++;
+                } else if (count > 0) {
+                    groups.push(count);
+                    count = 0;
+                }
+            }
+            if (count > 0) groups.push(count);
+            return groups.length > 0 ? groups : [0];
+        }
+
+        function checkTutorialStepSuccess() {
+            const step = TUTORIAL_STEPS[currentTutIndex];
+            let isCorrect = false;
+
+            if (step.requireAllX) {
+                isCorrect = tutBoard.every(v => v === 2);
+            } else if (step.anyContiguous) {
+                const pattern = getLinePattern(tutBoard);
+                isCorrect = pattern.length === 1 && pattern[0] === step.anyContiguous;
+            } else if (step.anyPattern) {
+                const pattern = getLinePattern(tutBoard);
+                isCorrect = JSON.stringify(pattern) === JSON.stringify(step.anyPattern);
+            } else if (step.target) {
+                isCorrect = tutBoard.every((v, i) => (v === 1 ? 1 : 0) === step.target[i]);
+            }
+
+            const clueBox = document.getElementById('tutClueBox');
+            const feedback = document.getElementById('tutFeedback');
+            const nextBtn = document.getElementById('tutNextBtn');
+
+            if (isCorrect) {
+                clearedTutorials.add(step.id);
+                saveProgress();
+                renderTutorialMissionButtons();
+
+                clueBox.classList.add('clue-done');
+                feedback.textContent = "딩동댕! 완벽하게 맞혔어요! 다음 미션으로 넘어가 볼까요? 🌟";
+                feedback.className = "mt-4 text-base sm:text-xl text-emerald-600 font-bold min-h-[2rem] text-center px-2 animate-bounce";
+                nextBtn.classList.remove('hidden');
+                nextBtn.textContent = currentTutIndex === TUTORIAL_STEPS.length - 1 ? "2단계 3×3 풀러 가기! 🚀" : "다음 미션! 🎉";
+                playSound('lineDone');
+            } else {
+                clueBox.classList.remove('clue-done');
+                feedback.textContent = step.hintMsg;
+                feedback.className = "mt-4 text-base sm:text-xl text-amber-700 min-h-[2rem] text-center px-2";
+                nextBtn.classList.add('hidden');
+            }
+        }
+
+        function resetTutorialRow() {
+            tutBoard = [0, 0, 0, 0, 0];
+            playSound('erase');
+            renderTutorialGrid();
+            checkTutorialStepSuccess();
+        }
+
+        function showTutorialAnswer() {
+            const step = TUTORIAL_STEPS[currentTutIndex];
+            if (step.requireAllX) {
+                tutBoard = [2, 2, 2, 2, 2];
+            } else if (step.target) {
+                tutBoard = step.target.map(v => (v === 1 ? 1 : 2));
+            } else if (step.anyContiguous === 4) {
+                tutBoard = [1, 1, 1, 1, 2];
+            } else if (step.anyContiguous === 3) {
+                tutBoard = [2, 1, 1, 1, 2];
+            } else if (step.anyPattern) {
+                tutBoard = [1, 2, 1, 2, 2];
+            }
+            playSound('hint');
+            renderTutorialGrid();
+            checkTutorialStepSuccess();
+        }
+
+        function prevTutorial() {
+            if (currentTutIndex > 0) {
+                currentTutIndex--;
+                loadTutorialStep();
+            }
+        }
+
+        function nextTutorial() {
+            if (currentTutIndex < TUTORIAL_STEPS.length - 1) {
+                currentTutIndex++;
+                loadTutorialStep();
+            } else {
+                // 튜토리얼 8개 완료 후 2단계(3x3) 퍼즐 선택창으로 이동
+                confetti({ particleCount: 70, spread: 60, origin: { y: 0.6 } });
+                openLevelSelect('3x3');
+            }
+        }
+
+        /* =========================================================================
+           6. 레벨 선택 화면 (3x3 10개 / 4x4 10개 / 5x5 12개)
+           ========================================================================= */
+        let currentCategory = '3x3';
+
+        function openLevelSelect(category) {
+            currentCategory = category;
+            showScreen('levels');
+            highlightTopTab(category);
+
+            const titleEl = document.getElementById('levelSelectTitle');
+            const subEl = document.getElementById('levelSelectSubtitle');
+            const progEl = document.getElementById('levelSelectProgress');
+
+            const filtered = PUZZLES.filter(p => p.category === category);
+            const clearedCount = filtered.filter(p => clearedPuzzles.has(p.id)).length;
+            progEl.textContent = `${clearedCount} / ${filtered.length} 완료`;
+
+            if (category === '3x3') {
+                titleEl.textContent = '🐣 2단계: 아기 네모 3×3 (10개 미션)';
+                titleEl.className = 'text-xl sm:text-3xl text-amber-600';
+                subEl.textContent = '가로줄과 세로줄이 만나는 곳을 생각하며 귀여운 3×3 그림 10개를 찾아봐요!';
+            } else if (category === '4x4') {
+                titleEl.textContent = '🐥 3단계: 쑥쑥 네모 4×4 (10개 미션)';
+                titleEl.className = 'text-xl sm:text-3xl text-sky-600';
+                subEl.textContent = '조금 더 넓어진 4×4 네모 칸 속에서 재미있는 그림 10개를 완성해 볼까요?';
+            } else {
+                titleEl.textContent = '🦅 4단계: 척척박사 5×5 (12개 미션)';
+                titleEl.className = 'text-xl sm:text-3xl text-violet-600';
+                subEl.textContent = '숫자 두 개 힌트까지 척척! 12개의 멋진 5×5 작품을 완성해 보세요!';
+            }
+
+            const grid = document.getElementById('levelListGrid');
+            grid.innerHTML = '';
+
+            filtered.forEach((puzzle, idx) => {
+                const isCleared = clearedPuzzles.has(puzzle.id);
+                const card = document.createElement('button');
+                card.className = `btn-cute p-3.5 rounded-3xl border-4 flex flex-col items-center justify-between gap-1.5 transition ${
+                    isCleared
+                        ? 'bg-emerald-50 border-emerald-400 text-emerald-900'
+                        : 'bg-amber-50/60 hover:bg-amber-100/70 border-amber-300 text-slate-700'
+                }`;
+                card.onclick = () => startGame(puzzle.id);
+
+                card.innerHTML = `
+                    <div class="w-full flex items-center justify-between text-xs px-1">
+                        <span class="font-bold text-slate-500">미션 ${idx + 1}</span>
+                        <span>${isCleared ? '⭐' : '🔒'}</span>
+                    </div>
+                    <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center text-3xl sm:text-4xl ${
+                        isCleared ? 'bg-white shadow-xs' : 'bg-white/80 text-amber-500'
+                    }">
+                        ${isCleared ? puzzle.emoji : '❓'}
+                    </div>
+                    <div class="text-base sm:text-lg font-bold truncate w-full">
+                        ${isCleared ? puzzle.name : `비밀 그림 #${idx + 1}`}
+                    </div>
+                    <span class="text-xs px-2.5 py-0.5 rounded-full ${
+                        isCleared ? 'bg-emerald-200 text-emerald-800' : 'bg-amber-200 text-amber-800'
+                    }">
+                        ${isCleared ? '⭐ 완료!' : '도전하기'}
+                    </span>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function backToLevels() {
+            openLevelSelect(currentCategory);
+        }
+
+        /* =========================================================================
+           7. 본 게임 (Nonogram 보드 및 인터랙션)
+           ========================================================================= */
+        let activePuzzle = null;
+        let userGrid = []; // 0: 빈칸, 1: 색칠, 2: X표시
+        let rowClues = [];
+        let colClues = [];
+        let gameTool = 'fill';
+        let isDragging = false;
+        let dragActionValue = null;
+        let hintHighlightCell = null; // {r, c}
+        let isGameWon = false;
+        let isPeekingAnswer = false;
+        let peekTimeoutId = null;
+
+        function computeClues(solution) {
+            const size = solution.length;
+            const rClues = [];
+            const cClues = [];
+
+            for (let r = 0; r < size; r++) {
+                rClues.push(getLinePattern(solution[r]));
+            }
+            for (let c = 0; c < size; c++) {
+                const col = [];
+                for (let r = 0; r < size; r++) col.push(solution[r][c]);
+                cClues.push(getLinePattern(col));
+            }
+            return { rClues, cClues };
+        }
+
+        function renderInGameMissionBar() {
+            const bar = document.getElementById('inGameMissionBar');
+            if (!bar || !activePuzzle) return;
+            bar.innerHTML = '';
+
+            const catPuzzles = PUZZLES.filter(p => p.category === activePuzzle.category);
+            catPuzzles.forEach((p, idx) => {
+                const isCurrent = p.id === activePuzzle.id;
+                const isDone = clearedPuzzles.has(p.id);
+                const btn = document.createElement('button');
+                btn.className = `btn-cute px-2.5 py-1 rounded-xl border-2 text-xs sm:text-sm font-bold flex items-center gap-1 transition ${
+                    isCurrent
+                        ? 'bg-amber-400 text-white border-amber-600 scale-105'
+                        : isDone
+                            ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                            : 'bg-white text-slate-600 border-slate-300'
+                }`;
+                btn.onclick = () => startGame(p.id);
+                btn.innerHTML = `<span>${idx + 1}번</span>${isDone ? '<span>⭐</span>' : ''}`;
+                bar.appendChild(btn);
+            });
+        }
+
+        function startGame(puzzleId) {
+            activePuzzle = PUZZLES.find(p => p.id === puzzleId);
+            if (!activePuzzle) return;
+
+            currentCategory = activePuzzle.category;
+            highlightTopTab(currentCategory);
+
+            isGameWon = false;
+            isPeekingAnswer = false;
+            if (peekTimeoutId) clearTimeout(peekTimeoutId);
+            hintHighlightCell = null;
+            const size = activePuzzle.size;
+            userGrid = Array.from({ length: size }, () => Array(size).fill(0));
+
+            const clues = computeClues(activePuzzle.solution);
+            rowClues = clues.rClues;
+            colClues = clues.cClues;
+
+            const catPuzzles = PUZZLES.filter(p => p.category === activePuzzle.category);
+            const idxInCat = catPuzzles.findIndex(p => p.id === activePuzzle.id) + 1;
+
+            document.getElementById('gameStageBadge').textContent = `${activePuzzle.size}×${activePuzzle.size} 미션 #${idxInCat} (${idxInCat}/${catPuzzles.length})`;
+            setHelperMessage('🦊', `"숫자 '${activePuzzle.size}'나 '0'이 있는 줄을 먼저 찾아보면 아주 쉬워!"`);
+
+            setGameTool('fill', true);
+            showScreen('game');
+            renderInGameMissionBar();
+            renderBoard();
+        }
+
+        function setGameTool(tool, silent = false) {
+            gameTool = tool;
+            const fillBtn = document.getElementById('modeFillBtn');
+            const xBtn = document.getElementById('modeXBtn');
+
+            if (tool === 'fill') {
+                fillBtn.className = "btn-cute-lg py-3 sm:py-3.5 px-4 rounded-2xl border-4 flex items-center justify-center gap-2 text-xl sm:text-2xl bg-sky-400 text-white border-sky-600 scale-102";
+                xBtn.className = "btn-cute-lg py-3 sm:py-3.5 px-4 rounded-2xl border-4 flex items-center justify-center gap-2 text-xl sm:text-2xl bg-white text-slate-500 border-slate-300";
+            } else {
+                xBtn.className = "btn-cute-lg py-3 sm:py-3.5 px-4 rounded-2xl border-4 flex items-center justify-center gap-2 text-xl sm:text-2xl bg-rose-400 text-white border-rose-600 scale-102";
+                fillBtn.className = "btn-cute-lg py-3 sm:py-3.5 px-4 rounded-2xl border-4 flex items-center justify-center gap-2 text-xl sm:text-2xl bg-white text-slate-500 border-slate-300";
+            }
+            if (!silent) playSound('erase');
+        }
+
+        function isRowSatisfied(r) {
+            const pattern = getLinePattern(userGrid[r]);
+            return JSON.stringify(pattern) === JSON.stringify(rowClues[r]);
+        }
+
+        function isColSatisfied(c) {
+            const colArr = userGrid.map(row => row[c]);
+            const pattern = getLinePattern(colArr);
+            return JSON.stringify(pattern) === JSON.stringify(colClues[c]);
+        }
+
+        function renderBoard() {
+            const board = document.getElementById('nonogramBoard');
+            const size = activePuzzle.size;
+
+            // 그리드 컬럼 설정: 좌측 힌트 1열 + 퍼즐 칸 size열
+            board.style.gridTemplateColumns = `repeat(${size + 1}, minmax(0, auto))`;
+            board.innerHTML = '';
+
+            const cellSizeClass = size === 3
+                ? 'w-16 h-16 sm:w-20 sm:h-20 text-3xl sm:text-4xl'
+                : size === 4
+                    ? 'w-14 h-14 sm:w-16 sm:h-16 text-2xl sm:text-3xl'
+                    : 'w-12 h-12 sm:w-14 sm:h-14 text-xl sm:text-2xl';
+
+            // 1. 좌상단 모서리 (귀여운 아이콘 표시)
+            const corner = document.createElement('div');
+            corner.className = "flex items-center justify-center bg-amber-100 rounded-2xl border-2 border-amber-300 text-2xl";
+            corner.innerHTML = "🎨";
+            board.appendChild(corner);
+
+            // 2. 상단 열(Column) 숫자 힌트들
+            for (let c = 0; c < size; c++) {
+                const colDone = isColSatisfied(c);
+                const colBox = document.createElement('div');
+                colBox.id = `col-clue-${c}`;
+                colBox.className = `flex flex-col items-center justify-end py-2 px-1 rounded-2xl border-2 min-h-[64px] sm:min-h-[74px] transition-all ${
+                    colDone
+                        ? 'clue-done'
+                        : 'bg-amber-100 border-amber-300 text-amber-950'
+                }`;
+
+                colClues[c].forEach(num => {
+                    const span = document.createElement('span');
+                    span.className = "text-xl sm:text-2xl leading-tight font-bold";
+                    span.textContent = num;
+                    colBox.appendChild(span);
+                });
+
+                if (colDone) {
+                    const check = document.createElement('span');
+                    check.className = "text-xs leading-none mt-0.5";
+                    check.textContent = "✅";
+                    colBox.appendChild(check);
+                }
+
+                board.appendChild(colBox);
+            }
+
+            // 3. 각 행(Row): 좌측 행 힌트 + 가로 셀들
+            for (let r = 0; r < size; r++) {
+                const rowDone = isRowSatisfied(r);
+                const rowBox = document.createElement('div');
+                rowBox.id = `row-clue-${r}`;
+                rowBox.className = `flex items-center justify-end gap-1.5 px-3 py-1 rounded-2xl border-2 min-w-[64px] sm:min-w-[76px] transition-all ${
+                    rowDone
+                        ? 'clue-done'
+                        : 'bg-amber-100 border-amber-300 text-amber-950'
+                }`;
+
+                if (rowDone) {
+                    const check = document.createElement('span');
+                    check.className = "text-xs mr-auto";
+                    check.textContent = "✅";
+                    rowBox.appendChild(check);
+                }
+
+                rowClues[r].forEach(num => {
+                    const span = document.createElement('span');
+                    span.className = "text-xl sm:text-2xl font-bold";
+                    span.textContent = num;
+                    rowBox.appendChild(span);
+                });
+
+                board.appendChild(rowBox);
+
+                // 가로 셀 생성
+                for (let c = 0; c < size; c++) {
+                    const val = userGrid[r][c];
+                    const cell = document.createElement('button');
+                    cell.type = "button";
+                    cell.dataset.r = r;
+                    cell.dataset.c = c;
+
+                    let cls = `cell ${cellSizeClass} rounded-2xl border-2 flex items-center justify-center font-bold select-none `;
+
+                    if (isGameWon) {
+                        // 완성 시 보드 자체가 컬러 픽셀 아트로 촤르륵 변신!
+                        // 사용자가 칠한 칸(val === 1)이면 지정 색상이 흰색(#FFF)이더라도 퍼즐 대표 색상으로 예쁘게 채움
+                        cls += "cell-color-reveal border-white/60 ";
+                        let pixelColor = activePuzzle.colors[r][c];
+                        if (val === 1 && (pixelColor === '#FFF' || pixelColor === '#FFFFFF')) {
+                            pixelColor = getFallbackVibrantColor(activePuzzle);
+                        } else if (val !== 1 && activePuzzle.solution[r][c] === 1) {
+                            // 다른 대칭 해로 완성하여 비워진 칸은 배경색 처리
+                            pixelColor = '#F8FAFC';
+                        }
+                        cell.style.backgroundColor = pixelColor;
+                        cell.style.animationDelay = `${(r * size + c) * 35}ms`;
+                    } else if (isPeekingAnswer && activePuzzle.solution[r][c] === 1) {
+                        cls += "cell-peek text-amber-600";
+                        cell.textContent = "⭐";
+                    } else if (val === 1) {
+                        cls += "cell-filled text-white";
+                    } else if (val === 2) {
+                        cls += "cell-x border-slate-300 text-rose-400";
+                        cell.textContent = "✖";
+                    } else {
+                        cls += "bg-white border-slate-300 hover:bg-sky-50";
+                    }
+
+                    if (!isGameWon && hintHighlightCell && hintHighlightCell.r === r && hintHighlightCell.c === c) {
+                        cls += " cell-hint-glow";
+                    }
+
+                    cell.className = cls;
+
+                    // 우클릭 시 브라우저 기본 컨텍스트 메뉴 방지
+                    cell.addEventListener('contextmenu', (e) => e.preventDefault());
+
+                    // 마우스(좌클릭/우클릭) & 터치 이벤트 (클릭 및 드래그 연속 칠하기 완벽 지원)
+                    cell.addEventListener('pointerdown', (e) => {
+                        e.preventDefault();
+                        if (cell.releasePointerCapture) {
+                            try { cell.releasePointerCapture(e.pointerId); } catch (_) {}
+                        }
+                        handleCellPointerDown(r, c, e);
+                    });
+                    cell.addEventListener('pointerenter', () => {
+                        if (isDragging) {
+                            handleCellPointerEnter(r, c);
+                        }
+                    });
+
+                    board.appendChild(cell);
+                }
+            }
+        }
+
+        // 모바일/태블릿 터치 및 마우스 슬라이드(드래그) 지원: 포인터 위치 아래의 셀을 감지
+        window.addEventListener('pointermove', (e) => {
+            if (isTutDragging) {
+                const targetTut = document.elementFromPoint(e.clientX, e.clientY);
+                if (targetTut && targetTut.dataset && targetTut.dataset.tutIdx !== undefined) {
+                    handleTutPointerEnter(parseInt(targetTut.dataset.tutIdx, 10));
+                }
+            }
+            if (!isDragging || isGameWon) return;
+            const targetEl = document.elementFromPoint(e.clientX, e.clientY);
+            if (targetEl && targetEl.dataset && targetEl.dataset.r !== undefined && targetEl.dataset.c !== undefined) {
+                const r = parseInt(targetEl.dataset.r, 10);
+                const c = parseInt(targetEl.dataset.c, 10);
+                handleCellPointerEnter(r, c);
+            }
+        });
+
+        // 전역 포인터 해제
+        window.addEventListener('pointerup', () => {
+            isDragging = false;
+            dragActionValue = null;
+            isTutDragging = false;
+            tutDragActionValue = null;
+        });
+
+        function handleCellPointerDown(r, c, e) {
+            if (isGameWon) return;
+            isDragging = true;
+            hintHighlightCell = null;
+
+            const currentVal = userGrid[r][c];
+            // 마우스 우클릭(button === 2)인 경우 선택된 도구와 관계없이 즉시 '❌ 여긴 아니야'(2) 토글
+            let targetVal;
+            if (e && e.button === 2) {
+                targetVal = 2;
+            } else {
+                targetVal = gameTool === 'fill' ? 1 : 2;
+            }
+            dragActionValue = currentVal === targetVal ? 0 : targetVal;
+
+            applyCellChange(r, c, dragActionValue);
+        }
+
+        function handleCellPointerEnter(r, c) {
+            if (isGameWon || dragActionValue === null) return;
+            if (userGrid[r][c] !== dragActionValue) {
+                applyCellChange(r, c, dragActionValue);
+            }
+        }
+
+        function applyCellChange(r, c, newVal) {
+            const prevRowDone = isRowSatisfied(r);
+            const prevColDone = isColSatisfied(c);
+
+            userGrid[r][c] = newVal;
+
+            if (newVal === 1) playSound('fill');
+            else if (newVal === 2) playSound('x');
+            else playSound('erase');
+
+            const nowRowDone = isRowSatisfied(r);
+            const nowColDone = isColSatisfied(c);
+
+            // 만약 방금 줄 하나를 완성했다면 반짝 효과음과 칭찬 메시지
+            if ((!prevRowDone && nowRowDone) || (!prevColDone && nowColDone)) {
+                playSound('lineDone');
+                setHelperMessage('🎉', '"우와! 방금 한 줄을 조건에 맞게 다 채웠어! 초록색 체크가 생겼지?"');
+            }
+
+            renderBoard();
+            checkWinCondition();
+        }
+
+        function setHelperMessage(emoji, text) {
+            document.getElementById('helperEmoji').textContent = emoji;
+            document.getElementById('helperMessage').textContent = text;
+        }
+
+        function getFallbackVibrantColor(puzzle) {
+            for (let r = 0; r < puzzle.size; r++) {
+                for (let c = 0; c < puzzle.size; c++) {
+                    if (puzzle.solution[r][c] === 1 && puzzle.colors[r][c] !== '#FFF') {
+                        return puzzle.colors[r][c];
+                    }
+                }
+            }
+            return '#38BDF8';
+        }
+
+        /* =========================================================================
+           8. 어린이 맞춤 도우미 기능 (힌트 요정, 친절한 확인, 정답 도우미 모달)
+           ========================================================================= */
+        function openAnswerHelperModal() {
+            if (!activePuzzle || isGameWon) return;
+            const modal = document.getElementById('answerModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeAnswerHelperModal() {
+            const modal = document.getElementById('answerModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function peekAnswer3Seconds() {
+            closeAnswerHelperModal();
+            if (!activePuzzle || isGameWon) return;
+
+            isPeekingAnswer = true;
+            playSound('hint');
+            setHelperMessage('👀', '"3초 동안 별표(⭐)로 정답 자리를 살짝 보여줄게! 잘 기억해 봐!"');
+            renderBoard();
+
+            if (peekTimeoutId) clearTimeout(peekTimeoutId);
+            peekTimeoutId = setTimeout(() => {
+                isPeekingAnswer = false;
+                if (!isGameWon) {
+                    setHelperMessage('🦊', '"방금 본 별표(⭐) 자리를 생각하며 색칠해 볼까?"');
+                    renderBoard();
+                }
+            }, 3000);
+        }
+
+        function revealFullAnswer() {
+            closeAnswerHelperModal();
+            if (!activePuzzle || isGameWon) return;
+
+            const size = activePuzzle.size;
+            for (let r = 0; r < size; r++) {
+                for (let c = 0; c < size; c++) {
+                    userGrid[r][c] = activePuzzle.solution[r][c] === 1 ? 1 : 2;
+                }
+            }
+            hintHighlightCell = null;
+            renderBoard();
+            checkWinCondition();
+        }
+
+        function useHintFairy() {
+            if (!activePuzzle || isGameWon) return;
+            // 만약 이미 모든 줄 조건이 충족되었다면 즉시 승리 처리
+            if (checkWinCondition()) return;
+
+            const size = activePuzzle.size;
+            const sol = activePuzzle.solution;
+
+            // 1순위: 잘못 칠한 칸(실수)이 있으면 알려주기 (단, 이미 초록불이 켜진 줄은 건드리지 않음)
+            for (let r = 0; r < size; r++) {
+                for (let c = 0; c < size; c++) {
+                    if (userGrid[r][c] === 1 && sol[r][c] === 0 && (!isRowSatisfied(r) || !isColSatisfied(c))) {
+                        hintHighlightCell = { r, c };
+                        playSound('oops');
+                        setHelperMessage('🧚‍♀️', `"앗! 반짝이는 칸(${r + 1}번째 줄)은 비워두어야 하는 칸이야! 다시 눌러서 지워볼까?"`);
+                        renderBoard();
+                        return;
+                    }
+                    if (userGrid[r][c] === 2 && sol[r][c] === 1 && (!isRowSatisfied(r) || !isColSatisfied(c))) {
+                        hintHighlightCell = { r, c };
+                        playSound('oops');
+                        setHelperMessage('🧚‍♀️', `"앗! 반짝이는 칸에는 ❌ 대신 색칠(✏️)을 해야 해!"`);
+                        renderBoard();
+                        return;
+                    }
+                }
+            }
+
+            // 2순위: 아직 안 칠한 정답 칸 중 하나를 찾아서 반짝이며 알려주기
+            const candidates = [];
+            for (let r = 0; r < size; r++) {
+                for (let c = 0; c < size; c++) {
+                    if (sol[r][c] === 1 && userGrid[r][c] !== 1) {
+                        candidates.push({ r, c });
+                    }
+                }
+            }
+
+            if (candidates.length > 0) {
+                const pick = candidates[Math.floor(Math.random() * candidates.length)];
+                hintHighlightCell = pick;
+                playSound('hint');
+                setGameTool('fill', true);
+                setHelperMessage('🧚‍♀️', `"샤랄라~✨ 노랗게 반짝이는 칸을 콕 눌러서 색칠해 봐!"`);
+                renderBoard();
+            }
+        }
+
+        function checkMistakesFriendly() {
+            if (!activePuzzle || isGameWon) return;
+            if (checkWinCondition()) return;
+
+            const size = activePuzzle.size;
+            const sol = activePuzzle.solution;
+
+            let wrongCount = 0;
+            let firstWrong = null;
+
+            for (let r = 0; r < size; r++) {
+                for (let c = 0; c < size; c++) {
+                    if ((userGrid[r][c] === 1 && sol[r][c] === 0) || (userGrid[r][c] === 2 && sol[r][c] === 1)) {
+                        wrongCount++;
+                        if (!firstWrong) firstWrong = { r, c };
+                    }
+                }
+            }
+
+            if (wrongCount === 0) {
+                playSound('lineDone');
+                setHelperMessage('👏', '"지금까지 실수한 칸이 하나도 없어! 아주 잘하고 있어, 계속 가보자!"');
+            } else {
+                hintHighlightCell = firstWrong;
+                playSound('oops');
+                setHelperMessage('🔍', `"조금 헷갈린 칸이 ${wrongCount}개 있네! 노랗게 반짝이는 칸부터 고쳐볼까?"`);
+                renderBoard();
+            }
+        }
+
+        function resetCurrentBoard() {
+            if (!activePuzzle) return;
+            const size = activePuzzle.size;
+            userGrid = Array.from({ length: size }, () => Array(size).fill(0));
+            hintHighlightCell = null;
+            isPeekingAnswer = false;
+            playSound('erase');
+            setHelperMessage('🦊', '"도화지를 깨끗하게 지웠어! 처음부터 차근차근 다시 찾아보자!"');
+            renderBoard();
+        }
+
+        /* =========================================================================
+           9. 퍼즐 완성 판정 (듀얼 판정: 모든 가로/세로 힌트 ✅ 만족 시 무조건 즉시 정답!)
+           ========================================================================= */
+        function checkWinCondition() {
+            if (!activePuzzle || isGameWon) return false;
+            const size = activePuzzle.size;
+            const sol = activePuzzle.solution;
+
+            // 판정 1: 모든 가로줄과 세로줄의 숫자 힌트가 조건에 맞는지(초록색 ✅ 체크 상태인지) 확인
+            let allRowsDone = true;
+            let allColsDone = true;
+            for (let r = 0; r < size; r++) {
+                if (!isRowSatisfied(r)) {
+                    allRowsDone = false;
+                    break;
+                }
+            }
+            for (let c = 0; c < size; c++) {
+                if (!isColSatisfied(c)) {
+                    allColsDone = false;
+                    break;
+                }
+            }
+
+            // 판정 2: 기본 solution 배열과 일치하는지 확인
+            let matchesSolution = true;
+            for (let r = 0; r < size; r++) {
+                for (let c = 0; c < size; c++) {
+                    const userFilled = userGrid[r][c] === 1 ? 1 : 0;
+                    if (userFilled !== sol[r][c]) {
+                        matchesSolution = false;
+                        break;
+                    }
+                }
+            }
+
+            // 모든 가로/세로 숫자 힌트를 완벽히 만족(모두 ✅)했거나, 정답 배열과 일치하면 즉시 정답 처리!
+            if (!allRowsDone || !allColsDone) {
+                if (!matchesSolution) return false;
+            }
+
+            // 정답 완성!
+            isGameWon = true;
+            isPeekingAnswer = false;
+            clearedPuzzles.add(activePuzzle.id);
+            saveProgress();
+            renderInGameMissionBar();
+            renderBoard(); // 보드 위의 파란 셀들을 컬러 픽셀 아트로 즉시 변환 애니메이션 실행
+
+            setHelperMessage('🎊', `"우와! 파란 네모 칸들이 알록달록 [${activePuzzle.name}] 그림으로 변신했어!"`);
+
+            playSound('win');
+            confetti({
+                particleCount: 110,
+                spread: 85,
+                origin: { y: 0.6 }
+            });
+
+            setTimeout(() => {
+                showWinModal();
+            }, 900);
+
+            return true;
+        }
+
+        function showWinModal() {
+            const modal = document.getElementById('winModal');
+            document.getElementById('winTitle').textContent = `와아! [${activePuzzle.name}] 완성!`;
+            document.getElementById('winStory').textContent = `"${activePuzzle.story}"`;
+            document.getElementById('winEmoji').textContent = activePuzzle.emoji;
+
+            // 완성된 픽셀 아트 컬러 렌더링
+            const artGrid = document.getElementById('winPixelArt');
+            const size = activePuzzle.size;
+            artGrid.style.gridTemplateColumns = `repeat(${size}, minmax(0, 1fr))`;
+            artGrid.innerHTML = '';
+
+            for (let r = 0; r < size; r++) {
+                for (let c = 0; c < size; c++) {
+                    const pixel = document.createElement('div');
+                    pixel.className = "w-8 h-8 sm:w-10 sm:h-10 rounded-lg transition-transform duration-300 shadow-2xs";
+                    pixel.style.backgroundColor = activePuzzle.colors[r][c];
+                    artGrid.appendChild(pixel);
+                }
+            }
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeWinModalToList() {
+            const modal = document.getElementById('winModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            openLevelSelect(activePuzzle.category);
+        }
+
+        function playNextPuzzle() {
+            const modal = document.getElementById('winModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+
+            const currentIndex = PUZZLES.findIndex(p => p.id === activePuzzle.id);
+            if (currentIndex >= 0 && currentIndex < PUZZLES.length - 1) {
+                const nextP = PUZZLES[currentIndex + 1];
+                currentCategory = nextP.category;
+                startGame(nextP.id);
+            } else {
+                // 마지막 퍼즐까지 다 푼 경우 스티커북으로 이동
+                showScreen('stickerbook');
+            }
+        }
+
+        /* =========================================================================
+           10. 스티커 도감 (내가 모은 그림장 32종) 렌더링
+           ========================================================================= */
+        let currentStickerFilter = 'all';
+
+        function renderStickerBook(filterCat = currentStickerFilter) {
+            currentStickerFilter = filterCat;
+
+            // 필터 탭 버튼 스타일 업데이트
+            ['all', '3x3', '4x4', '5x5'].forEach(cat => {
+                const btn = document.getElementById(`stickerFilter-${cat}`);
+                if (!btn) return;
+                if (cat === filterCat) {
+                    btn.className = "btn-cute px-3 py-1 rounded-xl border-2 text-sm bg-pink-400 text-white border-pink-600";
+                } else {
+                    btn.className = "btn-cute px-3 py-1 rounded-xl border-2 text-sm bg-white text-slate-600 border-slate-300";
+                }
+            });
+
+            const grid = document.getElementById('stickerGrid');
+            grid.innerHTML = '';
+
+            const list = filterCat === 'all' ? PUZZLES : PUZZLES.filter(p => p.category === filterCat);
+
+            list.forEach((puzzle) => {
+                const unlocked = clearedPuzzles.has(puzzle.id);
+                const card = document.createElement('div');
+                card.className = `p-3 rounded-3xl border-4 flex flex-col items-center justify-between text-center transition ${
+                    unlocked
+                        ? 'bg-amber-50 border-amber-300 shadow-xs cursor-pointer hover:scale-103'
+                        : 'bg-slate-100 border-slate-200 opacity-75 cursor-pointer hover:bg-slate-200/70'
+                }`;
+                card.onclick = () => startGame(puzzle.id);
+
+                if (unlocked) {
+                    // 미니 픽셀 아트 생성
+                    const size = puzzle.size;
+                    let miniPixels = `<div class="inline-grid gap-0.5 p-1.5 bg-white rounded-xl border border-amber-200 my-1" style="grid-template-columns: repeat(${size}, minmax(0, 1fr))">`;
+                    for (let r = 0; r < size; r++) {
+                        for (let c = 0; c < size; c++) {
+                            miniPixels += `<div class="w-3 h-3 rounded-xs" style="background-color:${puzzle.colors[r][c]}"></div>`;
+                        }
+                    }
+                    miniPixels += `</div>`;
+
+                    card.innerHTML = `
+                        <div class="text-2xl sm:text-3xl">${puzzle.emoji}</div>
+                        ${miniPixels}
+                        <div class="text-sm sm:text-base text-slate-800 font-bold mt-1 truncate w-full">${puzzle.name}</div>
+                        <span class="text-[11px] bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full">${puzzle.category} ⭐</span>
+                    `;
+                } else {
+                    card.innerHTML = `
+                        <div class="w-12 h-12 rounded-2xl bg-slate-200 flex items-center justify-center text-2xl text-slate-400 my-1.5">🔒</div>
+                        <div class="text-sm text-slate-400">숨어있는 그림</div>
+                        <span class="text-[11px] bg-slate-200 text-slate-500 px-2 py-0.5 rounded-full mt-1">${puzzle.category} 도전하기</span>
+                    `;
+                }
+
+                grid.appendChild(card);
+            });
+        }
+
+        /* =========================================================================
+           11. 퍼즐 유일해(Unique Solution) 백트래킹 검증기
+           ========================================================================= */
+        function countPuzzleSolutions(solutionGrid) {
+            const size = solutionGrid.length;
+            const { rClues, cClues } = computeClues(solutionGrid);
+
+            // 가능한 한 줄 조합 생성
+            function generateValidRows(clue) {
+                const results = [];
+                for (let mask = 0; mask < (1 << size); mask++) {
+                    const row = [];
+                    for (let c = 0; c < size; c++) {
+                        row.push((mask & (1 << c)) ? 1 : 0);
+                    }
+                    if (JSON.stringify(getLinePattern(row)) === JSON.stringify(clue)) {
+                        results.push(row);
+                    }
+                }
+                return results;
+            }
+
+            const validRowsPerR = rClues.map(clue => generateValidRows(clue));
+            const currentGrid = [];
+            let solutionCount = 0;
+
+            function backtrack(r) {
+                if (solutionCount > 1) return;
+                if (r === size) {
+                    for (let c = 0; c < size; c++) {
+                        const col = [];
+                        for (let rr = 0; rr < size; rr++) col.push(currentGrid[rr][c]);
+                        if (JSON.stringify(getLinePattern(col)) !== JSON.stringify(cClues[c])) {
+                            return;
+                        }
+                    }
+                    solutionCount++;
+                    return;
+                }
+                for (const candidateRow of validRowsPerR[r]) {
+                    currentGrid.push(candidateRow);
+                    backtrack(r + 1);
+                    currentGrid.pop();
+                    if (solutionCount > 1) return;
+                }
+            }
+
+            backtrack(0);
+            return solutionCount;
+        }
+
+        // 초기 실행
+        window.onload = function () {
+            // 모든 퍼즐 유일해 여부 검증
+            PUZZLES.forEach(p => {
+                const count = countPuzzleSolutions(p.solution);
+                if (count !== 1) {
+                    console.warn(`[Nonogram Check] ${p.id} has ${count} solutions.`);
+                }
+            });
+            loadProgress();
+            showScreen('home');
+        };
+    </script>
+</body>
+</html>
